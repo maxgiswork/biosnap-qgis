@@ -1,0 +1,19 @@
+[general]
+name=BioSnap
+qgisMinimumVersion=3.0
+description=GBIF Occurrence Downloader for QGIS
+version=0.1
+author=maxgiswork
+email=maxstereo.work@gmail.com
+about=BioSnap is a wizard-style QGIS plugin for downloading
+    GBIF occurrence data. Supports multilingual UI (EN/UA/DE/ES/ZH),
+    multiple ROI options, and both Search API and Download API modes.
+tracker=https://github.com/maxgiswork/biosnap-qgis/issues
+repository=https://github.com/maxgiswork/biosnap-qgis
+hasProcessingProvider=no
+tags=gbif,biodiversity,occurrence,species,download
+homepage=https://github.com/maxgiswork/biosnap-qgis
+category=Plugins
+icon=icons/icon.png
+experimental=True
+deprecated=False
