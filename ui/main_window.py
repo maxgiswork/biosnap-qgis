@@ -18,19 +18,14 @@ class MainWindow(QDialog):
         super().__init__(parent)
         self.state = AppState()
         self._current_step = 0
-        self._total_steps  = 5
+        self._total_steps = 5
         self._init_ui()
         self._update_nav_buttons()
     def _init_ui(self):
         self.setWindowTitle("BioSnap")
-        self.setMinimumSize(640, 600)
-        self.resize(720, 660)
-        self.setWindowFlags(
-            Qt.Window |
-            Qt.WindowMinimizeButtonHint |
-            Qt.WindowMaximizeButtonHint |
-            Qt.WindowCloseButtonHint
-        )
+        self.setMinimumSize(680, 620)
+        self.resize(760, 680)
+        self.setWindowFlags(Qt.Window | Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint | Qt.WindowCloseButtonHint)
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
@@ -46,7 +41,7 @@ class MainWindow(QDialog):
         for lang in available_languages():
             btn = QPushButton(lang["flag"])
             btn.setFixedSize(36, 28)
-            btn.setStyleSheet("QPushButton { color:white; background:transparent; border:1px solid rgba(255,255,255,0.4); border-radius:4px; font-size:11px; } QPushButton:hover { background:rgba(255,255,255,0.2); }")
+            btn.setStyleSheet("QPushButton{color:white;background:transparent;border:1px solid rgba(255,255,255,0.4);border-radius:4px;font-size:11px;}QPushButton:hover{background:rgba(255,255,255,0.2);}")
             btn.clicked.connect(lambda checked, c=lang["code"]: self._on_lang_changed(c))
             h_lay.addWidget(btn)
         root.addWidget(header)
@@ -55,22 +50,22 @@ class MainWindow(QDialog):
         self._init_steps()
         root.addWidget(self.stack)
         bottom = QWidget()
-        bottom.setFixedHeight(100)
-        bottom.setStyleSheet("background:#F5F5F5; border-top:1px solid #E0E0E0;")
+        bottom.setFixedHeight(120)
+        bottom.setStyleSheet("background:#F5F5F5;border-top:1px solid #E0E0E0;")
         b_lay = QVBoxLayout(bottom)
-        b_lay.setContentsMargins(16, 8, 16, 8)
+        b_lay.setContentsMargins(16, 6, 16, 6)
         b_lay.setSpacing(4)
         self.indicator = StepIndicator()
         b_lay.addWidget(self.indicator)
         nav = QHBoxLayout()
         nav.setSpacing(8)
         self.btn_back = QPushButton()
-        self.btn_back.setFixedSize(110, 32)
-        self.btn_back.setStyleSheet("QPushButton { background:white; border:1px solid #BDBDBD; border-radius:4px; font-size:13px; } QPushButton:hover { background:#EEEEEE; } QPushButton:disabled { color:#BDBDBD; }")
+        self.btn_back.setFixedSize(120, 34)
+        self.btn_back.setStyleSheet("QPushButton{background:white;border:1px solid #BDBDBD;border-radius:4px;font-size:13px;}QPushButton:hover{background:#EEEEEE;}QPushButton:disabled{color:#BDBDBD;}")
         self.btn_back.clicked.connect(self.on_back_clicked)
         self.btn_next = QPushButton()
-        self.btn_next.setFixedSize(110, 32)
-        self.btn_next.setStyleSheet("QPushButton { background:#1565C0; color:white; border:none; border-radius:4px; font-size:13px; } QPushButton:hover { background:#1976D2; } QPushButton:disabled { background:#BDBDBD; }")
+        self.btn_next.setFixedSize(120, 34)
+        self.btn_next.setStyleSheet("QPushButton{background:#1565C0;color:white;border:none;border-radius:4px;font-size:13px;}QPushButton:hover{background:#1976D2;}QPushButton:disabled{background:#BDBDBD;}")
         self.btn_next.clicked.connect(self.on_next_clicked)
         nav.addStretch()
         nav.addWidget(self.btn_back)
@@ -84,9 +79,9 @@ class MainWindow(QDialog):
             w = QWidget()
             lay = QVBoxLayout(w)
             lay.setAlignment(Qt.AlignCenter)
-            lbl = QLabel(f"Step {i+1}")
+            lbl = QLabel("Step {0}".format(i+1))
             lbl.setAlignment(Qt.AlignCenter)
-            lbl.setStyleSheet("font-size:24px; color:#9E9E9E;")
+            lbl.setStyleSheet("font-size:24px;color:#9E9E9E;")
             lay.addWidget(lbl)
             self.steps.append(w)
             self.stack.addWidget(w)
@@ -94,11 +89,10 @@ class MainWindow(QDialog):
         if 0 <= index < self._total_steps:
             self._current_step = index
             self.stack.setCurrentIndex(index)
-            self.indicator.set_step(index)
+            self.indicator.set_current(index)
             self._update_nav_buttons()
     def on_next_clicked(self):
         if self._current_step < self._total_steps - 1:
-            self.indicator.set_step_completed(self._current_step)
             self.go_to_step(self._current_step + 1)
     def on_back_clicked(self):
         if self._current_step > 0:
