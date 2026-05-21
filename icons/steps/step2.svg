@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36">
+  <defs>
+    <radialGradient id="bg" cx="38%" cy="32%" r="62%" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#62b83a"/>
+      <stop offset="100%" stop-color="#3a7a22"/>
+    </radialGradient>
+    <clipPath id="circ">
+      <circle cx="18" cy="18" r="16.5"/>
+    </clipPath>
+  </defs>
+  <circle cx="18" cy="18" r="17"   fill="#3a7a22"/>
+  <circle cx="18" cy="18" r="15.8" fill="url(#bg)"/>
+  <path d="M 8 10 A 11 11 0 0 1 24 7"
+        stroke="#ffffff" stroke-opacity="0.20" stroke-width="2.5"
+        fill="none" stroke-linecap="round"/>
+  <g clip-path="url(#circ)">
+    <path d="M18 5 C24 8 30 13 28 20 C26 27 20 31 18 31
+             C16 31 10 27 8 20 C6 13 12 8 18 5 Z"
+          fill="#ffffff" fill-opacity="0.22"
+          stroke="#ffffff" stroke-width="1.4"/>
+    <line x1="18" y1="7"  x2="18" y2="29"
+          stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="18" y1="13" x2="12" y2="16.5"
+          stroke="#ffffff" stroke-opacity="0.70" stroke-width="1.1" stroke-linecap="round"/>
+    <line x1="18" y1="13" x2="24" y2="16.5"
+          stroke="#ffffff" stroke-opacity="0.70" stroke-width="1.1" stroke-linecap="round"/>
+    <line x1="18" y1="18" x2="12" y2="21.5"
+          stroke="#ffffff" stroke-opacity="0.70" stroke-width="1.1" stroke-linecap="round"/>
+    <line x1="18" y1="18" x2="24" y2="21.5"
+          stroke="#ffffff" stroke-opacity="0.70" stroke-width="1.1" stroke-linecap="round"/>
+    <line x1="18" y1="23" x2="13" y2="25.5"
+          stroke="#ffffff" stroke-opacity="0.50" stroke-width="1.0" stroke-linecap="round"/>
+    <line x1="18" y1="23" x2="23" y2="25.5"
+          stroke="#ffffff" stroke-opacity="0.50" stroke-width="1.0" stroke-linecap="round"/>
+  </g>
+</svg>

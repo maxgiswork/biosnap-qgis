@@ -13,6 +13,7 @@ from qgis.PyQt.QtCore import Qt
 from core.i18n import tr, load_language, available_languages
 from core.state import AppState
 from ui.step_indicator import StepIndicator
+from ui.steps.step1_access import Step1Access
 class MainWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -75,11 +76,14 @@ class MainWindow(QDialog):
         self.retranslate_ui()
     def _init_steps(self):
         self.steps = []
-        for i in range(self._total_steps):
+        self.step1 = Step1Access(self.state)
+        self.steps.append(self.step1)
+        self.stack.addWidget(self.step1)
+        for i in range(1, self._total_steps):
             w = QWidget()
             lay = QVBoxLayout(w)
             lay.setAlignment(Qt.AlignCenter)
-            lbl = QLabel("Step {0}".format(i+1))
+            lbl = QLabel("Step {0}".format(i + 1))
             lbl.setAlignment(Qt.AlignCenter)
             lbl.setStyleSheet("font-size:24px;color:#9E9E9E;")
             lay.addWidget(lbl)
@@ -92,6 +96,8 @@ class MainWindow(QDialog):
             self.indicator.set_current(index)
             self._update_nav_buttons()
     def on_next_clicked(self):
+        if self._current_step == 0 and not self.step1.is_valid():
+            return
         if self._current_step < self._total_steps - 1:
             self.go_to_step(self._current_step + 1)
     def on_back_clicked(self):
@@ -109,3 +115,5 @@ class MainWindow(QDialog):
         self.btn_back.setText(tr("btn_back"))
         self._update_nav_buttons()
         self.indicator.retranslate_ui()
+        if hasattr(self, 'step1'):
+            self.step1.retranslate_ui()
