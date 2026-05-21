@@ -14,6 +14,7 @@ from core.i18n import tr, load_language, available_languages
 from core.state import AppState
 from ui.step_indicator import StepIndicator
 from ui.steps.step1_access import Step1Access
+from ui.steps.step2_taxon import Step2Taxon
 class MainWindow(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -79,7 +80,10 @@ class MainWindow(QDialog):
         self.step1 = Step1Access(self.state)
         self.steps.append(self.step1)
         self.stack.addWidget(self.step1)
-        for i in range(1, self._total_steps):
+        self.step2 = Step2Taxon(self.state)
+        self.steps.append(self.step2)
+        self.stack.addWidget(self.step2)
+        for i in range(2, self._total_steps):
             w = QWidget()
             lay = QVBoxLayout(w)
             lay.setAlignment(Qt.AlignCenter)
@@ -97,6 +101,8 @@ class MainWindow(QDialog):
             self._update_nav_buttons()
     def on_next_clicked(self):
         if self._current_step == 0 and not self.step1.is_valid():
+            return
+        if self._current_step == 1 and not self.step2.is_valid():
             return
         if self._current_step < self._total_steps - 1:
             self.go_to_step(self._current_step + 1)
@@ -117,3 +123,5 @@ class MainWindow(QDialog):
         self.indicator.retranslate_ui()
         if hasattr(self, 'step1'):
             self.step1.retranslate_ui()
+        if hasattr(self, 'step2'):
+            self.step2.retranslate_ui()
