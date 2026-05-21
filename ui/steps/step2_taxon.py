@@ -290,8 +290,8 @@ class Step2Taxon(QWidget):
         )
         self._history_popup.setVisible(False)
         self._history_popup.itemClicked.connect(self._on_history_popup_clicked)
-        self._history_popup.leaveEvent = lambda e: self._history_popup.setVisible(False)
-        self._history_popup.leaveEvent = lambda e: self._history_popup.setVisible(False)
+        self._history_popup.leaveEvent = lambda e: QTimer.singleShot(200, self._check_and_hide)
+        self._history_popup.leaveEvent = lambda e: QTimer.singleShot(200, self._check_and_hide)
         root.addWidget(self._history_popup)
         self._taxon_card = TaxonCard(getattr(self._state, "data_source", "gbif"))
         self._taxon_card.setVisible(False)
@@ -467,11 +467,17 @@ class Step2Taxon(QWidget):
         return False
 
     def _hide_popup_if_not_hovered(self):
-        if not self._history_popup.underMouse():
+        QTimer.singleShot(200, self._check_and_hide)
+
+    def _check_and_hide(self):
+        if not self._history_popup.underMouse() and not self._search_field.underMouse():
             self._history_popup.setVisible(False)
 
     def _hide_popup_if_not_hovered(self):
-        if not self._history_popup.underMouse():
+        QTimer.singleShot(200, self._check_and_hide)
+
+    def _check_and_hide(self):
+        if not self._history_popup.underMouse() and not self._search_field.underMouse():
             self._history_popup.setVisible(False)
 
     def _on_search_focus(self, event):
