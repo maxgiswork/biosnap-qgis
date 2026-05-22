@@ -53,7 +53,7 @@ class ModeButton(QWidget):
         layout.setSpacing(4)
         self._btn = QPushButton(label)
         self._btn.setFixedHeight(28)
-        self._btn.setMinimumWidth(120)
+        self._btn.setMinimumWidth(180)
         self._btn.setCursor(Qt.PointingHandCursor)
         self._btn.clicked.connect(lambda: self.clicked.emit(self._mode_id))
         layout.addWidget(self._btn)
@@ -61,7 +61,8 @@ class ModeButton(QWidget):
         self._desc = QLabel(desc)
         self._desc.setStyleSheet("color:#9E9E9E; font-size:10px; border:none; background:transparent;")
         self._desc.setWordWrap(True)
-        self._desc.setFixedWidth(150)
+        self._desc.setMinimumWidth(150)
+        self._desc.setMaximumWidth(300)
         layout.addWidget(self._desc)
         self.set_active(False)
 
