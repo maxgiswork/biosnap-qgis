@@ -60,6 +60,207 @@ RANKS = ["Kingdom","Phylum","Class","Order",
          "Genus","Subgenus","Species","Subspecies"]
 
 
+
+class AccuracySlider(QWidget):
+
+    MARKS = [1, 10, 25, 50, 100, 500, 1000, 2000, 5000, 10000]
+
+    def __init__(self, min_val=1, max_val=100000, value=10000, parent=None):
+        super().__init__(parent)
+        self.min_val = min_val
+        self.max_val = max_val
+        self._value = value
+        self._drag = False
+        self._settings_key = 'biosnap/accuracy_slider'
+        self.setFixedHeight(44)
+        try:
+            from qgis.core import QgsSettings
+            s = QgsSettings()
+            self._value = int(s.value(self._settings_key + '/value', value))
+        except Exception:
+            pass
+
+    def value(self):
+        return self._value
+
+    def minimumSizeHint(self):
+        from qgis.PyQt.QtCore import QSize
+        return QSize(0, 44)
+
+    def sizeHint(self):
+        from qgis.PyQt.QtCore import QSize
+        return QSize(100, 44)
+
+    def _tx(self):
+        tw = self.width() - 20
+        tx = 10
+        ty = 32
+        return tx, tw, ty
+
+    def _mark_x(self, i):
+        tx, tw, ty = self._tx()
+        n = len(self.MARKS) - 1
+        start = tx + 15
+        end = tx + tw - 15
+        return int(start + i * (end - start) / n)
+
+    def _nearest_mark(self, x):
+        dists = [(abs(x - self._mark_x(i)), i) for i in range(len(self.MARKS))]
+        return self.MARKS[min(dists)[1]]
+
+    def _val_to_x(self, val):
+        # ищем ближайшую метку
+        if val in self.MARKS:
+            i = self.MARKS.index(val)
+            return self._mark_x(i)
+        # для произвольных значений — линейно между метками
+        tx, tw, ty = self._tx()
+        n = len(self.MARKS) - 1
+        for i in range(n):
+            if self.MARKS[i] <= val <= self.MARKS[i+1]:
+                r = (val - self.MARKS[i]) / (self.MARKS[i+1] - self.MARKS[i])
+                x1 = self._mark_x(i)
+                x2 = self._mark_x(i+1)
+                return int(x1 + r * (x2 - x1))
+        tx, tw, ty = self._tx()
+        return tx + tw if val > self.MARKS[-1] else tx
+
+    def paintEvent(self, e):
+        from qgis.PyQt.QtGui import QPainter, QColor, QPen, QFont
+        from qgis.PyQt.QtCore import Qt
+        GBIF_solid = QColor('#2D7D1F')
+        GBIF_alpha = QColor('#2D7D1F')
+        GBIF_alpha.setAlpha(166)
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        tx, tw, ty = self._tx()
+        x = self._val_to_x(self._value)
+        from qgis.PyQt.QtGui import QPainterPath
+        from qgis.PyQt.QtCore import QRectF
+        from qgis.PyQt.QtCore import QPointF
+        # метки — рисуем ДО трека (под обводкой)
+        # крайние с отступом 15px внутрь
+        p.setBrush(QColor('#FFFFFF'))
+        p.setPen(Qt.NoPen)
+        for i in range(len(self.MARKS)):
+            mx = self._mark_x(i)
+            if i == 0:
+                mx = tx + 15
+            elif i == len(self.MARKS) - 1:
+                mx = tx + tw - 15
+            p.drawEllipse(QPointF(float(mx), float(ty)), 3.0, 3.0)
+        # трек поверх крайних меток
+        from qgis.PyQt.QtCore import QRectF, QRect
+        from qgis.PyQt.QtGui import QPainterPath, QRegion
+        pen = QPen(QColor('#9CA3AF'))
+        pen.setWidth(1)
+        p.setPen(pen)
+        p.setBrush(QColor('#E5E7EB'))
+        p.drawRoundedRect(QRectF(tx, ty - 3, tw, 6), 3, 3)
+        # заполненная часть — рисуем полный rounded rect, клипаем справа по x
+        if x > tx:
+            p.save()
+            p.setClipRect(QRect(tx, ty - 4, max(1, x - tx), 8))
+            p.setPen(Qt.NoPen)
+            p.setBrush(GBIF_alpha)
+            p.drawRoundedRect(QRectF(tx, ty - 3, tw, 6), 3, 3)
+            p.restore()
+        # внутренние метки поверх трека
+        p.setBrush(QColor('#FFFFFF'))
+        p.setPen(Qt.NoPen)
+        for i in range(1, len(self.MARKS) - 1):
+            mx = self._mark_x(i)
+            p.drawEllipse(QPointF(float(mx), float(ty)), 3.0, 3.0)
+
+        # ползунок
+        p.setBrush(GBIF_solid)
+        p.setPen(Qt.NoPen)
+        p.drawEllipse(x - 7, ty - 7, 14, 14)
+        p.setBrush(QColor('#FFFFFF'))
+        p.setPen(Qt.NoPen)
+        p.drawEllipse(QPointF(float(x), float(ty)), 4.0, 4.0)
+        # подпись только над ползунком
+        p.setPen(QColor('#374151'))
+        fnt = QFont('Segoe UI', 8)
+        fnt.setBold(True)
+        p.setFont(fnt)
+        fm = p.fontMetrics()
+        if self._value >= 1000:
+            txt = f"{self._value // 1000} {(self._value % 1000):03d} m"
+        else:
+            txt = f"{self._value} m"
+        tw2 = fm.horizontalAdvance(txt)
+        lx = max(0, min(self.width() - tw2, x - tw2 // 2))
+        p.drawText(lx, ty - 12, txt)
+        p.end()
+
+    def _hit(self, x):
+        return abs(x - self._val_to_x(self._value)) <= 12
+
+    def mousePressEvent(self, e):
+        from qgis.PyQt.QtGui import QFont, QFontMetrics
+        fnt = QFont('Segoe UI', 8)
+        fnt.setBold(True)
+        fm = QFontMetrics(fnt)
+        tx, tw, ty = self._tx()
+        x = self._val_to_x(self._value)
+        if self._value >= 1000:
+            txt = f"{self._value // 1000} {(self._value % 1000):03d} m"
+        else:
+            txt = f"{self._value} m"
+        tw2 = fm.horizontalAdvance(txt)
+        lx = max(0, min(self.width() - tw2, x - tw2 // 2))
+        h = fm.height()
+        top = ty - 12 - h
+        if lx <= e.x() <= lx + tw2 and top <= e.y() <= top + h + 4:
+            self._show_editor(lx, top, tw2, h)
+            return
+        self._drag = self._hit(e.x())
+
+    def _show_editor(self, lx, top, w, h):
+        from qgis.PyQt.QtWidgets import QLineEdit
+        from qgis.PyQt.QtCore import Qt
+        editor = QLineEdit(self)
+        editor.setFont(__import__('qgis.PyQt.QtGui', fromlist=['QFont']).QFont('Segoe UI', 8))
+        editor.setText(str(self._value))
+        editor.setFixedSize(max(50, w + 8), h + 6)
+        editor.move(max(0, lx - 4), max(0, top - 2))
+        editor.setAlignment(Qt.AlignCenter)
+        editor.setStyleSheet(
+            'QLineEdit { background:#FFFFFF; border:1px solid #2D7D1F;'
+            'border-radius:3px; padding:0px; font-size:8pt; font-weight:bold; }')
+        editor.selectAll()
+        editor.show()
+        editor.setFocus()
+
+        def commit():
+            try:
+                val = int(editor.text())
+                self._value = max(1, min(100000, val))
+                if self._settings_key:
+                    from qgis.core import QgsSettings
+                    s = QgsSettings()
+                    s.setValue(self._settings_key + '/value', self._value)
+            except ValueError:
+                pass
+            editor.deleteLater()
+            self.update()
+
+        editor.editingFinished.connect(commit)
+        editor.focusOutEvent = lambda e: (commit(), type(editor).focusOutEvent(editor, e))
+
+    def mouseMoveEvent(self, e):
+        if self._drag:
+            self._value = self._nearest_mark(e.x())
+            self.update()
+
+    def mouseReleaseEvent(self, e):
+        self._drag = False
+        if self._settings_key:
+            from qgis.core import QgsSettings
+            s = QgsSettings()
+            s.setValue(self._settings_key + '/value', self._value)
+
 class YearRangeSlider(QWidget):
 
     def __init__(self, min_year=1500, max_year=2026, start=2000, end=2026, parent=None):
@@ -69,11 +270,27 @@ class YearRangeSlider(QWidget):
         self._start = start
         self._end = end
         self._drag = None
+        self._settings_key = 'biosnap/year_slider'
         self.setFixedHeight(44)
-        self.setMinimumWidth(80)
+        # загружаем сохранённые значения
+        try:
+            from qgis.core import QgsSettings
+            s = QgsSettings()
+            self._start = int(s.value(self._settings_key + '/start', start))
+            self._end   = int(s.value(self._settings_key + '/end',   end))
+        except Exception:
+            pass
 
     def years(self):
         return self._start, self._end
+
+    def minimumSizeHint(self):
+        from qgis.PyQt.QtCore import QSize
+        return QSize(0, 44)
+
+    def sizeHint(self):
+        from qgis.PyQt.QtCore import QSize
+        return QSize(100, 44)
 
     def _tx(self):
         tw = self.width() - 20
@@ -202,6 +419,11 @@ class YearRangeSlider(QWidget):
                     self._start = max(self.min_year, min(val, self._end - 1))
                 else:
                     self._end = min(self.max_year, max(val, self._start + 1))
+                if self._settings_key:
+                    from qgis.core import QgsSettings
+                    s = QgsSettings()
+                    s.setValue(self._settings_key + '/start', self._start)
+                    s.setValue(self._settings_key + '/end', self._end)
             except ValueError:
                 pass
             editor.deleteLater()
@@ -237,6 +459,11 @@ class YearRangeSlider(QWidget):
     def mouseReleaseEvent(self, e):
         self._drag = None
         self._overlap_x = None
+        if self._settings_key:
+            from qgis.core import QgsSettings
+            s = QgsSettings()
+            s.setValue(self._settings_key + '/start', self._start)
+            s.setValue(self._settings_key + '/end', self._end)
 
 
 class BioSnapDialog(QDialog):
@@ -245,9 +472,9 @@ class BioSnapDialog(QDialog):
         super().__init__(parent)
         self.iface = iface
         self.setWindowTitle("BioSnap")
-        self.setMinimumWidth(440)
-        self.setMinimumHeight(620)
-        self.resize(460, 760)
+        self.setMinimumWidth(320)
+        self.setMinimumHeight(560)
+        self.resize(460, 720)
         self.setStyleSheet(MAIN_STYLE)
         self._mode   = "single"
         self._source = "both"
@@ -307,9 +534,7 @@ class BioSnapDialog(QDialog):
         self._update_slider_width()
 
     def _update_slider_width(self):
-        if hasattr(self, '_territory_frame') and hasattr(self, '_year_slider'):
-            w = int(self._territory_frame.width() * 0.45)
-            self._year_slider.setFixedWidth(max(80, w))
+        pass
 
     def _slbl(self, text):
         lbl = QLabel(text)
@@ -370,6 +595,7 @@ class BioSnapDialog(QDialog):
         h.addWidget(self._btn_single)
         h.addWidget(self._btn_batch)
         h.addStretch()
+
         return w
 
     def _set_mode(self, mode):
@@ -577,7 +803,7 @@ class BioSnapDialog(QDialog):
         h.addWidget(self._btn_gbif)
         h.addWidget(self._btn_inat)
         h.addWidget(self._btn_both)
-        h.addStretch()
+
         v.addWidget(row)
         return w
 
@@ -589,11 +815,13 @@ class BioSnapDialog(QDialog):
     def _build_year_accuracy_block(self):
         w = QWidget()
         w.setStyleSheet("background:transparent;")
+        w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         h = QHBoxLayout(w)
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(20)
         yw = QWidget()
         yw.setStyleSheet("background:transparent;")
+        yw.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         yv = QVBoxLayout(yw)
         yv.setContentsMargins(0, 0, 0, 0)
         yv.setSpacing(4)
@@ -609,17 +837,19 @@ class BioSnapDialog(QDialog):
         yv.addWidget(yr)
         aw = QWidget()
         aw.setStyleSheet("background:transparent;")
+        aw.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         av = QVBoxLayout(aw)
         av.setContentsMargins(0, 0, 0, 0)
         av.setSpacing(4)
         av.addWidget(self._slbl("Accuracy ≤"))
-        self._accuracy = QLineEdit("10 000 m")
-        self._accuracy.setFixedSize(88, 30)
-        self._accuracy.setStyleSheet(FIELD)
-        av.addWidget(self._accuracy)
+        self._accuracy_slider = AccuracySlider(100, 100000, 10000)
+        self._accuracy_slider.setSizePolicy(
+            __import__("qgis.PyQt.QtWidgets", fromlist=["QSizePolicy"]).QSizePolicy.Expanding,
+            __import__("qgis.PyQt.QtWidgets", fromlist=["QSizePolicy"]).QSizePolicy.Fixed)
+        av.addWidget(self._accuracy_slider)
         h.addWidget(yw)
         h.addWidget(aw)
-        h.addStretch()
+
         return w
 
     def _build_toggles_block(self):
@@ -691,7 +921,7 @@ class BioSnapDialog(QDialog):
             cv.addWidget(lb)
             h.addWidget(col)
             h.addSpacing(24)
-        h.addStretch()
+
         return frame
 
     def _build_advanced_btn(self):
@@ -706,7 +936,7 @@ class BioSnapDialog(QDialog):
             "border:1px solid #E5E7EB; border-radius:6px;"
             "padding:0 12px; font-size:11px;")
         h.addWidget(btn)
-        h.addStretch()
+
         return w
 
     def _build_output_block(self):
@@ -743,7 +973,7 @@ class BioSnapDialog(QDialog):
             btn.clicked.connect(lambda c, f=fmt: self._set_format(f))
             self._fmt_btns[fmt] = btn
             h.addWidget(btn)
-        h.addStretch()
+
         v.addWidget(row)
         return w
 
