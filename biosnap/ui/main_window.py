@@ -61,6 +61,67 @@ RANKS = ["Kingdom","Phylum","Class","Order",
 
 
 
+
+class ToggleSwitch(QWidget):
+    """Toggle 34x20px. OFF: #C8C8C8, ON: #2E7D32. Thumb: white."""
+    COLOR_ON  = (46, 125, 50)    # #2E7D32
+    COLOR_OFF = (200, 200, 200)  # #C8C8C8
+
+    def __init__(self, checked=False, parent=None):
+        super().__init__(parent)
+        self._checked = checked
+        self._anim = 1.0 if checked else 0.0
+        self.setFixedSize(29, 17)
+        from qgis.PyQt.QtCore import Qt as _Qt
+        self.setCursor(_Qt.PointingHandCursor)
+        self._timer = QTimer(self)
+        self._timer.setInterval(16)
+        self._timer.timeout.connect(self._animate)
+
+    def isChecked(self):
+        return self._checked
+
+    def setChecked(self, val):
+        self._checked = bool(val)
+        self._anim = 1.0 if self._checked else 0.0
+        self.update()
+
+    def _animate(self):
+        target = 1.0 if self._checked else 0.0
+        if abs(self._anim - target) < 0.08:
+            self._anim = target
+            self._timer.stop()
+        else:
+            self._anim += 0.08 if target > self._anim else -0.08
+        self.update()
+
+    def mousePressEvent(self, e):
+        self._checked = not self._checked
+        self._timer.start()
+
+    def paintEvent(self, e):
+        from qgis.PyQt.QtGui import QPainter, QColor, QPainterPath
+        from qgis.PyQt.QtCore import Qt, QRectF, QPointF
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        W, H = self.width(), self.height()
+        r = H / 2
+        t = self._anim
+        ro, go, bo = self.COLOR_OFF
+        rn, gn, bn = self.COLOR_ON
+        rc = int(ro + t * (rn - ro))
+        gc = int(go + t * (gn - go))
+        bc = int(bo + t * (bn - bo))
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(0, 0, W, H), r, r)
+        p.fillPath(path, QColor(rc, gc, bc))
+        p.setPen(Qt.NoPen)
+        knob_r = r - 2
+        knob_x = (2 + knob_r) + t * (W - 2 * (2 + knob_r))
+        p.setBrush(QColor(255, 255, 255))
+        p.drawEllipse(QPointF(knob_x, H / 2), knob_r, knob_r)
+        p.end()
+
 class AccuracySlider(QWidget):
 
     MARKS = [1, 10, 25, 50, 100, 500, 1000, 2000, 5000, 10000]
@@ -72,29 +133,23 @@ class AccuracySlider(QWidget):
         self._value = value
         self._drag = False
         self._settings_key = 'biosnap/accuracy_slider'
-        self.setFixedHeight(44)
-        try:
-            from qgis.core import QgsSettings
-            s = QgsSettings()
-            self._value = int(s.value(self._settings_key + '/value', value))
-        except Exception:
-            pass
+        self.setFixedHeight(36)
 
     def value(self):
         return self._value
 
     def minimumSizeHint(self):
         from qgis.PyQt.QtCore import QSize
-        return QSize(0, 44)
+        return QSize(0, 36)
 
     def sizeHint(self):
         from qgis.PyQt.QtCore import QSize
-        return QSize(100, 44)
+        return QSize(100, 36)
 
     def _tx(self):
         tw = self.width() - 20
         tx = 10
-        ty = 32
+        ty = 26
         return tx, tw, ty
 
     def _mark_x(self, i):
@@ -246,8 +301,16 @@ class AccuracySlider(QWidget):
             editor.deleteLater()
             self.update()
 
-        editor.editingFinished.connect(commit)
-        editor.focusOutEvent = lambda e: (commit(), type(editor).focusOutEvent(editor, e))
+        _committed = [False]
+        def safe_commit():
+            if not _committed[0]:
+                _committed[0] = True
+                commit()
+        editor.editingFinished.connect(safe_commit)
+        def _foe(e):
+            safe_commit()
+            type(editor).focusOutEvent(editor, e)
+        editor.focusOutEvent = _foe
 
     def mouseMoveEvent(self, e):
         if self._drag:
@@ -271,7 +334,7 @@ class YearRangeSlider(QWidget):
         self._end = end
         self._drag = None
         self._settings_key = 'biosnap/year_slider'
-        self.setFixedHeight(44)
+        self.setFixedHeight(36)
         # загружаем сохранённые значения
         try:
             from qgis.core import QgsSettings
@@ -286,16 +349,16 @@ class YearRangeSlider(QWidget):
 
     def minimumSizeHint(self):
         from qgis.PyQt.QtCore import QSize
-        return QSize(0, 44)
+        return QSize(0, 36)
 
     def sizeHint(self):
         from qgis.PyQt.QtCore import QSize
-        return QSize(100, 44)
+        return QSize(100, 36)
 
     def _tx(self):
         tw = self.width() - 20
         tx = 10
-        ty = 32
+        ty = 26
         return tx, tw, ty
 
     def _year_to_x(self, year):
@@ -429,8 +492,16 @@ class YearRangeSlider(QWidget):
             editor.deleteLater()
             self.update()
 
-        editor.editingFinished.connect(commit)
-        editor.focusOutEvent = lambda e: (commit(), type(editor).focusOutEvent(editor, e))
+        _committed = [False]
+        def safe_commit():
+            if not _committed[0]:
+                _committed[0] = True
+                commit()
+        editor.editingFinished.connect(safe_commit)
+        def _foe(e):
+            safe_commit()
+            type(editor).focusOutEvent(editor, e)
+        editor.focusOutEvent = _foe
 
     def mousePressEvent(self, e):
         side, lx, top, w, h = self._label_hit(e.x(), e.y())
@@ -506,7 +577,8 @@ class BioSnapDialog(QDialog):
 
         bl.addWidget(self._build_mode_switcher())
         bl.addWidget(self._build_search_block())
-        bl.addWidget(self._divider())
+        self._divider_after_search = self._divider()
+        bl.addWidget(self._divider_after_search)
         bl.addWidget(self._build_territory_block())
         bl.addWidget(self._divider())
         bl.addWidget(self._build_source_block())
@@ -640,6 +712,16 @@ class BioSnapDialog(QDialog):
             self._MODE_ADV_ACTIVE if mode == "advanced" else self._MODE_ADV_DEFAULT)
         self._search_block.setVisible(mode != "advanced")
         self._btn_add_row.setVisible(mode == "batch")
+        if hasattr(self, "_divider_after_search"):
+            self._divider_after_search.setVisible(mode != "advanced")
+        if hasattr(self, "_toggles_stack"):
+            idx = {"single": 0, "batch": 1, "advanced": 2}.get(mode, 0)
+            self._toggles_stack.setCurrentIndex(idx)
+        if hasattr(self, "_sliders_stack"):
+            idx = {"single": 0, "batch": 1, "advanced": 2}.get(mode, 0)
+            self._sliders_stack.setCurrentIndex(idx)
+            self._year_slider     = self._year_sliders.get(mode, self._year_sliders["single"])
+            self._accuracy_slider = self._accuracy_sliders.get(mode, self._accuracy_sliders["single"])
         if mode == "batch":
             self._restore_batch_state()
         else:
@@ -1025,76 +1107,164 @@ class BioSnapDialog(QDialog):
         self._btn_both.setStyleSheet(b)
 
     def _build_year_accuracy_block(self):
-        w = QWidget()
-        w.setStyleSheet("background:transparent;")
-        w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        h = QHBoxLayout(w)
-        h.setContentsMargins(0, 0, 0, 0)
-        h.setSpacing(20)
-        yw = QWidget()
-        yw.setStyleSheet("background:transparent;")
-        yw.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        yv = QVBoxLayout(yw)
-        yv.setContentsMargins(0, 0, 0, 0)
-        yv.setSpacing(4)
-        yv.addWidget(self._slbl("Year range"))
-        yr = QWidget()
-        yr.setStyleSheet("background:transparent;")
-        yh = QHBoxLayout(yr)
-        yh.setContentsMargins(0, 0, 0, 0)
-        yh.setSpacing(6)
-        self._year_slider = YearRangeSlider(1500, 2026, 2000, 2026)
+        from qgis.PyQt.QtWidgets import QStackedWidget as _SW
+        self._sliders_stack = _SW()
+        self._sliders_stack.setStyleSheet("background:transparent;")
+        self._sliders_stack.setContentsMargins(0, 0, 0, 0)
+        self._year_sliders = {}
+        self._accuracy_sliders = {}
 
-        yh.addWidget(self._year_slider)
-        yv.addWidget(yr)
-        aw = QWidget()
-        aw.setStyleSheet("background:transparent;")
-        aw.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        av = QVBoxLayout(aw)
-        av.setContentsMargins(0, 0, 0, 0)
-        av.setSpacing(4)
-        av.addWidget(self._slbl("Accuracy ≤"))
-        self._accuracy_slider = AccuracySlider(100, 100000, 10000)
-        self._accuracy_slider.setSizePolicy(
-            __import__("qgis.PyQt.QtWidgets", fromlist=["QSizePolicy"]).QSizePolicy.Expanding,
-            __import__("qgis.PyQt.QtWidgets", fromlist=["QSizePolicy"]).QSizePolicy.Fixed)
-        av.addWidget(self._accuracy_slider)
-        h.addWidget(yw)
-        h.addWidget(aw)
+        for mode in ["single", "batch", "advanced"]:
+            w = QWidget()
+            w.setStyleSheet("background:transparent;")
+            w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            h = QHBoxLayout(w)
+            h.setContentsMargins(0, 0, 0, 0)
+            h.setSpacing(20)
 
-        return w
+            # Year range
+            yw = QWidget()
+            yw.setStyleSheet("background:transparent;")
+            yw.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            yv = QVBoxLayout(yw)
+            yv.setContentsMargins(0, 0, 0, 0)
+            yv.setSpacing(2)
+            yv.addWidget(self._slbl("Year range"))
+            yr = QWidget()
+            yr.setStyleSheet("background:transparent;")
+            yh = QHBoxLayout(yr)
+            yh.setContentsMargins(0, 0, 0, 0)
+            yh.setSpacing(6)
+            ys = YearRangeSlider(1500, 2026, 2000, 2026)
+            ys._settings_key = f'biosnap/year_slider/{mode}'
+            try:
+                from qgis.core import QgsSettings
+                s = QgsSettings()
+                ys._start = int(s.value(ys._settings_key + '/start', 2000))
+                ys._end   = int(s.value(ys._settings_key + '/end',   2026))
+            except Exception:
+                pass
+            yh.addWidget(ys)
+            yv.addWidget(yr)
+            self._year_sliders[mode] = ys
+
+            # Accuracy
+            aw = QWidget()
+            aw.setStyleSheet("background:transparent;")
+            aw.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            av = QVBoxLayout(aw)
+            av.setContentsMargins(0, 0, 0, 0)
+            av.setSpacing(2)
+            av.addWidget(self._slbl("Accuracy ≤"))
+            ac = AccuracySlider(100, 100000, 10000)
+            ac._settings_key = f'biosnap/accuracy_slider/{mode}'
+            try:
+                from qgis.core import QgsSettings
+                s = QgsSettings()
+                ac._value = int(s.value(ac._settings_key + '/value', 10000))
+            except Exception:
+                pass
+            ac.setSizePolicy(
+                QSizePolicy.Expanding, QSizePolicy.Fixed)
+            av.addWidget(ac)
+            self._accuracy_sliders[mode] = ac
+
+            h.addWidget(yw)
+            h.addWidget(aw)
+            self._sliders_stack.addWidget(w)
+
+        self._sliders_stack.setCurrentIndex(0)
+        # обратная совместимость
+        self._year_slider     = self._year_sliders["single"]
+        self._accuracy_slider = self._accuracy_sliders["single"]
+        return self._sliders_stack
+
+
+    _TOGGLE_KEYS = [
+        "has_coordinates", "has_taxonomy",
+        "has_media", "fossils_only",
+        "no_duplicates"
+    ]
+    _TOGGLE_DEFAULTS = {
+        "single":   {"has_coordinates": True,  "has_taxonomy": True,
+                     "has_media": False, "fossils_only": False, "no_duplicates": True},
+        "batch":    {"has_coordinates": True,  "has_taxonomy": True,
+                     "has_media": False, "fossils_only": False, "no_duplicates": True},
+        "advanced": {"has_coordinates": True,  "has_taxonomy": True,
+                     "has_media": False, "fossils_only": False, "no_duplicates": True},
+    }
 
     def _build_toggles_block(self):
-        w = QWidget()
-        w.setStyleSheet("background:transparent;")
-        v = QVBoxLayout(w)
-        v.setContentsMargins(0, 4, 0, 0)
-        v.setSpacing(6)
+        from qgis.PyQt.QtWidgets import QStackedWidget as _SW
+        self._toggles_stack = _SW()
+        self._toggles_stack.setStyleSheet("background:transparent;")
+        self._toggle_widgets = {}
 
-        def tog(label, checked=False):
-            cb = QCheckBox(label)
-            cb.setChecked(checked)
-            cb.setStyleSheet(TOGGLE_ON if checked else TOGGLE_OFF)
-            cb.stateChanged.connect(
-                lambda s, c=cb: c.setStyleSheet(
-                    TOGGLE_ON if c.isChecked() else TOGGLE_OFF))
-            return cb
+        for mode in ["single", "batch", "advanced"]:
+            w = QWidget()
+            w.setStyleSheet("background:transparent;")
+            v = QVBoxLayout(w)
+            v.setContentsMargins(0, 4, 0, 0)
+            v.setSpacing(6)
+            toggles = {}
 
-        for pairs in [
-            [("Has coordinates", True),  ("Has taxonomy",  True)],
-            [("Has media",       False), ("Fossils only",  False)],
-            [("No duplicates",   True)],
-        ]:
-            row = QWidget()
-            row.setStyleSheet("background:transparent;")
-            rh = QHBoxLayout(row)
-            rh.setContentsMargins(0, 0, 0, 0)
-            rh.setSpacing(20)
-            for label, checked in pairs:
-                rh.addWidget(tog(label, checked))
-            rh.addStretch()
-            v.addWidget(row)
-        return w
+            def make_tog(key, mode_=mode, label="", checked=False):
+                from qgis.PyQt.QtWidgets import QLabel as _QL
+                from qgis.core import QgsSettings
+                saved = QgsSettings().value(
+                    f"biosnap/toggles/{mode_}/{key}", None)
+                if saved is not None:
+                    checked = saved in (True, "true", "True", 1, "1")
+                t = ToggleSwitch(checked)
+                t.mousePressEvent_orig = t.mousePressEvent
+                def on_press(e, t_=t, k_=key, m_=mode_):
+                    t_.mousePressEvent_orig(e)
+                    QgsSettings().setValue(
+                        f"biosnap/toggles/{m_}/{k_}", t_.isChecked())
+                t.mousePressEvent = on_press
+                lw = QWidget()
+                lw.setStyleSheet("background:transparent;")
+                lh = QHBoxLayout(lw)
+                lh.setContentsMargins(0, 0, 0, 0)
+                lh.setSpacing(8)
+                lh.addWidget(t)
+                lb = _QL(label)
+                lb.setStyleSheet(
+                    "color:#1C2B1C; font-size:12px; background:transparent;")
+                lh.addWidget(lb)
+                lh.addStretch()
+                toggles[key] = t
+                return lw
+
+            defs = self._TOGGLE_DEFAULTS[mode]
+            pairs_list = [
+                [("has_coordinates", "Has coordinates"), ("has_taxonomy",  "Has taxonomy")],
+                [("has_media",       "Has media"),       ("fossils_only",  "Fossils only")],
+                [("no_duplicates",   "No duplicates")],
+            ]
+            for pairs in pairs_list:
+                row = QWidget()
+                row.setStyleSheet("background:transparent;")
+                rh = QHBoxLayout(row)
+                rh.setContentsMargins(0, 0, 0, 0)
+                rh.setSpacing(20)
+                for key, label in pairs:
+                    rh.addWidget(make_tog(key, mode, label, defs[key]))
+                rh.addStretch()
+                v.addWidget(row)
+
+            self._toggle_widgets[mode] = toggles
+            self._toggles_stack.addWidget(w)
+
+        self._toggles_stack.setCurrentIndex(0)
+        return self._toggles_stack
+
+    def _get_toggles(self, mode=None):
+        """Возвращает dict {key: bool} для текущего или указанного режима."""
+        m = mode or self._mode
+        if m not in self._toggle_widgets:
+            m = "single"
+        return {k: t.isChecked() for k, t in self._toggle_widgets[m].items()}
 
     def _build_preview_block(self):
         frame = QFrame()
