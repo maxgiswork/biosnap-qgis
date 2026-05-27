@@ -35,16 +35,16 @@ BTN_BOTH_OFF = ("background-color:#ECECF0; color:#1A1A22; border:none;"
                 "border-radius:13px; padding:4px 14px; font-size:12px;")
 FIELD = ("border:1px solid #E5E7EB; border-radius:6px;"
          "padding:4px 8px; background:#FFFFFF; font-size:12px;")
-TOGGLE_ON  = ("QCheckBox { font-size:12px; color:#1A1A22;"
+TOGGLE_ON  = ("QCheckBox { font-size:12px; color:#1C2B1C;"
               "background:transparent; spacing:8px; }"
-              "QCheckBox::indicator { width:38px; height:22px;"
-              "border-radius:11px; background-color:#1A1A22; border:none; }"
-              "QCheckBox::indicator:unchecked { background-color:#D1D5DB; }")
-TOGGLE_OFF = ("QCheckBox { font-size:12px; color:#9CA3AF;"
+              "QCheckBox::indicator { width:34px; height:20px;"
+              "border-radius:10px; background-color:#2E7D32; border:none; }"
+              "QCheckBox::indicator:unchecked { background-color:#C8C8C8; }")
+TOGGLE_OFF = ("QCheckBox { font-size:12px; color:#5C6B5C;"
               "background:transparent; spacing:8px; }"
-              "QCheckBox::indicator { width:38px; height:22px;"
-              "border-radius:11px; background-color:#D1D5DB; border:none; }"
-              "QCheckBox::indicator:checked { background-color:#1A1A22; }")
+              "QCheckBox::indicator { width:34px; height:20px;"
+              "border-radius:10px; background-color:#C8C8C8; border:none; }"
+              "QCheckBox::indicator:checked { background-color:#2E7D32; }")
 SEARCH_FRAME_NORMAL = ("QFrame { background:#FFFFFF; border:1.5px solid #E5E7EB;"
                        "border-radius:8px; }")
 SEARCH_FRAME_FOCUS  = ("QFrame { background:#FFFFFF; border:1.5px solid #1A1A22;"
@@ -128,9 +128,9 @@ class AccuracySlider(QWidget):
     def paintEvent(self, e):
         from qgis.PyQt.QtGui import QPainter, QColor, QPen, QFont
         from qgis.PyQt.QtCore import Qt
-        GBIF_solid = QColor('#2D7D1F')
-        GBIF_alpha = QColor('#2D7D1F')
-        GBIF_alpha.setAlpha(166)
+        GBIF_solid = QColor('#2E7D32')
+        GBIF_alpha = QColor('#4CAF50')
+        GBIF_alpha.setAlpha(180)
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         tx, tw, ty = self._tx()
@@ -180,7 +180,7 @@ class AccuracySlider(QWidget):
         p.setPen(Qt.NoPen)
         p.drawEllipse(QPointF(float(x), float(ty)), 4.0, 4.0)
         # подпись только над ползунком
-        p.setPen(QColor('#374151'))
+        p.setPen(QColor('#1C2B1C'))
         fnt = QFont('Segoe UI', 8)
         fnt.setBold(True)
         p.setFont(fnt)
@@ -311,9 +311,9 @@ class YearRangeSlider(QWidget):
     def paintEvent(self, e):
         from qgis.PyQt.QtGui import QPainter, QColor, QPen, QFont
         from qgis.PyQt.QtCore import Qt
-        GBIF_solid = QColor('#2D7D1F')
-        GBIF_alpha = QColor('#2D7D1F')
-        GBIF_alpha.setAlpha(166)
+        GBIF_solid = QColor('#2E7D32')
+        GBIF_alpha = QColor('#4CAF50')
+        GBIF_alpha.setAlpha(180)
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         tx, tw, ty = self._tx()
@@ -338,7 +338,7 @@ class YearRangeSlider(QWidget):
             p.setPen(Qt.NoPen)
             p.drawEllipse(x - 3, ty - 3, 6, 6)
         # подписи без слипания
-        p.setPen(QColor('#374151'))
+        p.setPen(QColor('#1C2B1C'))
         fnt = QFont('Segoe UI', 8)
         fnt.setBold(True)
         p.setFont(fnt)
@@ -508,8 +508,6 @@ class BioSnapDialog(QDialog):
         bl.addWidget(self._build_toggles_block())
         bl.addWidget(self._divider())
         bl.addWidget(self._build_preview_block())
-        bl.addWidget(self._build_advanced_btn())
-        bl.addWidget(self._divider())
         bl.addWidget(self._build_output_block())
         bl.addWidget(self._build_format_block())
         bl.addSpacing(4)
@@ -574,6 +572,31 @@ class BioSnapDialog(QDialog):
         outer.addStretch()
         return header
 
+    _MODE_DEFAULT = (
+        "QPushButton {background:#FFFFFF; color:#1C2B1C;"
+        "border:1px solid #D6D9D6; border-radius:8px;"
+        "min-width:70px; max-width:70px; min-height:28px; max-height:28px;"
+        "font-size:12px;}"
+        "QPushButton:hover {background:rgba(46,125,50,0.06);"
+        "border-color:#A5D6A7;}")
+    _MODE_ACTIVE = (
+        "QPushButton {background:#C8E6C9; color:#2E7D32;"
+        "border:2px solid #2E7D32; border-radius:8px;"
+        "min-width:70px; max-width:70px; min-height:28px; max-height:28px;"
+        "font-size:12px; font-weight:600;}")
+    _MODE_ADV_DEFAULT = (
+        "QPushButton {background:#FFFFFF; color:#6A1B9A;"
+        "border:1px solid #D6D9D6; border-radius:8px;"
+        "min-width:80px; max-width:80px; min-height:28px; max-height:28px;"
+        "font-size:12px;}"
+        "QPushButton:hover {background:#F3E5F5;"
+        "border-color:#AB47BC;}")
+    _MODE_ADV_ACTIVE = (
+        "QPushButton {background:#E1BEE7; color:#6A1B9A;"
+        "border:2px solid #6A1B9A; border-radius:8px;"
+        "min-width:80px; max-width:80px; min-height:28px; max-height:28px;"
+        "font-size:12px; font-weight:600;}")
+
     def _build_mode_switcher(self):
         w = QWidget()
         w.setStyleSheet("background:transparent;")
@@ -585,23 +608,28 @@ class BioSnapDialog(QDialog):
         h.addWidget(lbl)
         h.addSpacing(4)
         self._btn_single = QPushButton("Single")
-        self._btn_single.setFixedHeight(28)
-        self._btn_single.setStyleSheet(CHIP_ON)
+        self._btn_single.setStyleSheet(self._MODE_ACTIVE)
         self._btn_single.clicked.connect(lambda: self._set_mode("single"))
         self._btn_batch = QPushButton("Batch")
-        self._btn_batch.setFixedHeight(28)
-        self._btn_batch.setStyleSheet(CHIP_OFF)
+        self._btn_batch.setStyleSheet(self._MODE_DEFAULT)
         self._btn_batch.clicked.connect(lambda: self._set_mode("batch"))
+        self._btn_advanced = QPushButton("Advanced")
+        self._btn_advanced.setStyleSheet(self._MODE_ADV_DEFAULT)
+        self._btn_advanced.clicked.connect(lambda: self._set_mode("advanced"))
         h.addWidget(self._btn_single)
         h.addWidget(self._btn_batch)
+        h.addWidget(self._btn_advanced)
         h.addStretch()
-
         return w
 
     def _set_mode(self, mode):
         self._mode = mode
-        self._btn_single.setStyleSheet(CHIP_ON if mode == "single" else CHIP_OFF)
-        self._btn_batch.setStyleSheet(CHIP_ON if mode == "batch" else CHIP_OFF)
+        self._btn_single.setStyleSheet(
+            self._MODE_ACTIVE if mode == "single" else self._MODE_DEFAULT)
+        self._btn_batch.setStyleSheet(
+            self._MODE_ACTIVE if mode == "batch" else self._MODE_DEFAULT)
+        self._btn_advanced.setStyleSheet(
+            self._MODE_ADV_ACTIVE if mode == "advanced" else self._MODE_ADV_DEFAULT)
         self._search_block.setVisible(mode == "single")
 
     def _set_rank(self, rank):
@@ -672,8 +700,8 @@ class BioSnapDialog(QDialog):
         # Placeholder
         self._ph_label = QLabel("Type name...  e.g. Chrysis ignita")
         self._ph_label.setStyleSheet(
-            "color:#9CA3AF; font-size:12px; background:transparent;"
-            "border:none; padding-left:2px;")
+            "color:#AAAAAA; font-size:12px; font-style:italic;"
+            "background:transparent; border:none; padding-left:2px;")
         self._ph_label.setAttribute(Qt.WA_TransparentForMouseEvents)
         self._ph_label.setParent(self._search_field)
         self._ph_label.move(2, 0)
@@ -721,7 +749,7 @@ class BioSnapDialog(QDialog):
         btn_search = QPushButton("🔍")
         btn_search.setFixedSize(28, 28)
         btn_search.setStyleSheet(
-            "background-color:#1A1A22; color:#FFFFFF; border:none;"
+            "background-color:#2E7D32; color:#FFFFFF; border:none;"
             "border-radius:6px; font-size:15px;")
 
         h.addWidget(self._rank_btn)
@@ -732,6 +760,17 @@ class BioSnapDialog(QDialog):
         v.addWidget(self._search_frame)
         return self._search_block
 
+    _TERR_DEFAULT = (
+        "QPushButton {background:#FFFFFF; color:#1C2B1C;"
+        "border:1px solid #D6D9D6; border-radius:6px;"
+        "padding:4px 6px; font-size:12px;}"
+        "QPushButton:hover {background:#BBDEFB; border-color:#1565C0;"
+        "color:#1565C0;}")
+    _TERR_ACTIVE = (
+        "QPushButton {background:#E3F2FD; color:#1565C0;"
+        "border:2px solid #1565C0; border-radius:6px;"
+        "padding:4px 6px; font-size:12px; font-weight:600;}")
+
     def _build_territory_block(self):
         w = QWidget()
         w.setStyleSheet("background:transparent;")
@@ -740,41 +779,67 @@ class BioSnapDialog(QDialog):
         v.setSpacing(4)
         v.addWidget(self._slbl("Territory"))
         frame = QFrame()
-        frame.setFixedHeight(36)
+        frame.setFixedHeight(38)
         frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self._territory_frame = frame
-        frame.setStyleSheet(
-            "QFrame { background:#FFFFFF; border:1.5px solid #E5E7EB;"
-            "border-radius:8px; }")
+        frame.setStyleSheet("QFrame { background:transparent; border:none; }")
         h = QHBoxLayout(frame)
-        h.setContentsMargins(2, 2, 2, 2)
-        h.setSpacing(0)
-        btn_layer = QPushButton(
+        h.setContentsMargins(0, 0, 0, 0)
+        h.setSpacing(6)
+        self._btn_layer = QPushButton(
             QgsApplication.getThemeIcon("mActionAddMap.svg"), "  Choose layer")
-        btn_layer.setIconSize(QSize(16, 16))
-        btn_layer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        btn_layer.setStyleSheet(
-            "background-color:rgba(45,125,31,0.12); color:#2D7D1F;"
-            "border:none; border-radius:6px; font-size:12px; font-weight:bold;")
-        btn_draw = QPushButton(
+        self._btn_layer.setIconSize(QSize(16, 16))
+        self._btn_layer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self._btn_layer.setStyleSheet(self._TERR_ACTIVE)
+        self._btn_layer.clicked.connect(lambda: self._set_territory("layer"))
+        self._btn_draw = QPushButton(
             QgsApplication.getThemeIcon("mActionDigitizeWithCurve.svg"), "  Draw manually")
-        btn_draw.setIconSize(QSize(16, 16))
-        btn_draw.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        btn_draw.setStyleSheet(
-            "background-color:rgba(13,148,136,0.12); color:#0D9488;"
-            "border:none; border-radius:6px; font-size:12px; font-weight:bold;")
-        btn_extent = QPushButton(
+        self._btn_draw.setIconSize(QSize(16, 16))
+        self._btn_draw.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self._btn_draw.setStyleSheet(self._TERR_DEFAULT)
+        self._btn_draw.clicked.connect(lambda: self._set_territory("draw"))
+        self._btn_extent = QPushButton(
             QgsApplication.getThemeIcon("mActionMapIdentification.svg"), "  Map extent")
-        btn_extent.setIconSize(QSize(16, 16))
-        btn_extent.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        btn_extent.setStyleSheet(
-            "background-color:rgba(26,26,34,0.07); color:#1A1A22;"
-            "border:none; border-radius:6px; font-size:12px; font-weight:bold;")
-        h.addWidget(btn_layer)
-        h.addWidget(btn_draw)
-        h.addWidget(btn_extent)
+        self._btn_extent.setIconSize(QSize(16, 16))
+        self._btn_extent.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self._btn_extent.setStyleSheet(self._TERR_DEFAULT)
+        self._btn_extent.clicked.connect(lambda: self._set_territory("extent"))
+        h.addWidget(self._btn_layer)
+        h.addWidget(self._btn_draw)
+        h.addWidget(self._btn_extent)
         v.addWidget(frame)
         return w
+
+    def _set_territory(self, mode):
+        self._territory_mode = mode
+        mapping = {
+            "layer":  (self._TERR_ACTIVE,  self._TERR_DEFAULT, self._TERR_DEFAULT),
+            "draw":   (self._TERR_DEFAULT,  self._TERR_ACTIVE,  self._TERR_DEFAULT),
+            "extent": (self._TERR_DEFAULT,  self._TERR_DEFAULT, self._TERR_ACTIVE),
+        }
+        a, b, c = mapping[mode]
+        self._btn_layer.setStyleSheet(a)
+        self._btn_draw.setStyleSheet(b)
+        self._btn_extent.setStyleSheet(c)
+
+    _SRC_DEFAULT = (
+        "QPushButton {background:#FFFFFF; color:#1C2B1C;"
+        "border:1px solid #D6D9D6; border-radius:6px;"
+        "padding:4px 10px; font-size:12px;}"
+        "QPushButton:hover {background:rgba(46,125,50,0.06);"
+        "border-color:#A5D6A7;}")
+    _SRC_GBIF = (
+        "QPushButton {background:#C8E6C9; color:#2E7D32;"
+        "border:2px solid #2E7D32; border-radius:6px;"
+        "padding:4px 10px; font-size:12px; font-weight:600;}")
+    _SRC_INAT = (
+        "QPushButton {background:#E3F2FD; color:#1565C0;"
+        "border:2px solid #1565C0; border-radius:6px;"
+        "padding:4px 10px; font-size:12px; font-weight:600;}")
+    _SRC_BOTH = (
+        "QPushButton {background:#F0F0F0; color:#1C2B1C;"
+        "border:2px solid #1C2B1C; border-radius:6px;"
+        "padding:4px 10px; font-size:12px; font-weight:600;}")
 
     def _build_source_block(self):
         w = QWidget()
@@ -788,29 +853,35 @@ class BioSnapDialog(QDialog):
         h = QHBoxLayout(row)
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(6)
-        self._btn_gbif = QPushButton("GBIF ▾")
-        self._btn_gbif.setFixedHeight(28)
-        self._btn_gbif.setStyleSheet(BTN_GBIF)
+        self._btn_gbif = QPushButton("GBIF")
+        self._btn_gbif.setFixedHeight(30)
+        self._btn_gbif.setStyleSheet(self._SRC_GBIF)
         self._btn_gbif.clicked.connect(lambda: self._set_source("gbif"))
-        self._btn_inat = QPushButton("iNaturalist ▾")
-        self._btn_inat.setFixedHeight(28)
-        self._btn_inat.setStyleSheet(BTN_INAT)
+        self._btn_inat = QPushButton("iNaturalist")
+        self._btn_inat.setFixedHeight(30)
+        self._btn_inat.setStyleSheet(self._SRC_DEFAULT)
         self._btn_inat.clicked.connect(lambda: self._set_source("inat"))
         self._btn_both = QPushButton("Both")
-        self._btn_both.setFixedHeight(28)
-        self._btn_both.setStyleSheet(BTN_BOTH_ON)
+        self._btn_both.setFixedHeight(30)
+        self._btn_both.setStyleSheet(self._SRC_DEFAULT)
         self._btn_both.clicked.connect(lambda: self._set_source("both"))
         h.addWidget(self._btn_gbif)
         h.addWidget(self._btn_inat)
         h.addWidget(self._btn_both)
-
         v.addWidget(row)
         return w
 
     def _set_source(self, source):
         self._source = source
-        self._btn_both.setStyleSheet(
-            BTN_BOTH_ON if source == "both" else BTN_BOTH_OFF)
+        styles = {
+            "gbif":  (self._SRC_GBIF,    self._SRC_DEFAULT, self._SRC_DEFAULT),
+            "inat":  (self._SRC_DEFAULT,  self._SRC_INAT,   self._SRC_DEFAULT),
+            "both":  (self._SRC_DEFAULT,  self._SRC_DEFAULT, self._SRC_BOTH),
+        }
+        g, n, b = styles.get(source, styles["gbif"])
+        self._btn_gbif.setStyleSheet(g)
+        self._btn_inat.setStyleSheet(n)
+        self._btn_both.setStyleSheet(b)
 
     def _build_year_accuracy_block(self):
         w = QWidget()
@@ -887,57 +958,59 @@ class BioSnapDialog(QDialog):
     def _build_preview_block(self):
         frame = QFrame()
         frame.setStyleSheet(
-            "QFrame { background:#FFFFFF; border:1px solid #E5E7EB;"
+            "QFrame { background:#F1F8E9; border:1px solid #C8E6C9;"
             "border-radius:8px; }")
         h = QHBoxLayout(frame)
-        h.setContentsMargins(14, 10, 14, 10)
+        h.setContentsMargins(12, 10, 12, 10)
         h.setSpacing(0)
         map_box = QFrame()
         map_box.setFixedSize(58, 46)
         map_box.setStyleSheet(
-            "background:#E5E7EB; border-radius:6px; border:none;")
+            "background:#E3F2FD; border:1px solid #BBDEFB; border-radius:4px;")
         ml = QVBoxLayout(map_box)
         ml.setContentsMargins(0, 0, 0, 0)
         lm = QLabel("map")
         lm.setAlignment(Qt.AlignCenter)
-        lm.setStyleSheet("color:#9CA3AF; font-size:10px; background:transparent;")
+        lm.setStyleSheet("color:#1565C0; font-size:10px; background:transparent;")
         ml.addWidget(lm)
         h.addWidget(map_box)
-        h.addSpacing(16)
-        for number, label in [("--","Records"),("--","Species"),("--","Families")]:
+        h.addSpacing(14)
+        self._stat_labels = {}
+        for key, label in [("records","Records"),("species","Species"),("families","Families")]:
             col = QWidget()
             col.setStyleSheet("background:transparent;")
             cv = QVBoxLayout(col)
             cv.setContentsMargins(0, 0, 0, 0)
             cv.setSpacing(1)
-            n = QLabel(number)
+            n = QLabel("—")
             n.setStyleSheet(
-                "font-size:20px; font-weight:bold;"
-                "color:#1A1A22; background:transparent;")
+                "font-size:18px; font-weight:600;"
+                "color:#9E9E9E; background:transparent;")
             lb = QLabel(label)
             lb.setStyleSheet(
-                "font-size:10px; color:#6B7280; background:transparent;")
+                "font-size:10px; color:#5C6B5C; background:transparent;")
             cv.addWidget(n)
             cv.addWidget(lb)
             h.addWidget(col)
-            h.addSpacing(24)
-
+            h.addSpacing(20)
+            self._stat_labels[key] = n
         return frame
 
-    def _build_advanced_btn(self):
-        w = QWidget()
-        w.setStyleSheet("background:transparent;")
-        h = QHBoxLayout(w)
-        h.setContentsMargins(0, 0, 0, 0)
-        btn = QPushButton("⚙  Advanced settings")
-        btn.setFixedHeight(28)
-        btn.setStyleSheet(
-            "background-color:#F3F4F6; color:#6B7280;"
-            "border:1px solid #E5E7EB; border-radius:6px;"
-            "padding:0 12px; font-size:11px;")
-        h.addWidget(btn)
+    def _update_stats(self, records=None, species=None, families=None):
+        data = {"records": records, "species": species, "families": families}
+        for key, val in data.items():
+            lbl = self._stat_labels.get(key)
+            if lbl is None:
+                continue
+            if val is None:
+                lbl.setText("—")
+                lbl.setStyleSheet("font-size:18px; font-weight:600;"
+                    "color:#9E9E9E; background:transparent;")
+            else:
+                lbl.setText(str(val))
+                lbl.setStyleSheet("font-size:18px; font-weight:600;"
+                    "color:#1C2B1C; background:transparent;")
 
-        return w
 
     def _build_output_block(self):
         w = QWidget()
@@ -983,10 +1056,13 @@ class BioSnapDialog(QDialog):
             btn.setStyleSheet(CHIP_SM_ON if f == fmt else CHIP_SM_OFF)
 
     def _build_run_btn(self):
-        btn = QPushButton("  Run BioSnap")
-        btn.setFixedHeight(48)
+        btn = QPushButton("⚡  Run BioSnap")
+        btn.setFixedHeight(44)
         btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         btn.setStyleSheet(
-            "background-color:#D21C1C; color:#FFFFFF; border:none;"
-            "border-radius:10px; font-size:14px; font-weight:bold;")
+            "QPushButton {background-color:#2E7D32; color:#FFFFFF; border:none;"
+            "border-radius:6px; font-size:14px; font-weight:600;}"
+            "QPushButton:hover {background-color:#388E3C;}"
+            "QPushButton:pressed {background-color:#1B5E20;}"
+            "QPushButton:disabled {background-color:#D6D9D6; color:#9E9E9E;}")
         return btn
