@@ -472,6 +472,13 @@ class BioSnapDialog(QDialog):
         super().__init__(parent)
         self.iface = iface
         self.setWindowTitle("BioSnap")
+        self.setWindowFlags(
+            Qt.Window |
+            Qt.WindowTitleHint |
+            Qt.WindowCloseButtonHint |
+            Qt.WindowMinimizeButtonHint |
+            Qt.WindowMaximizeButtonHint
+        )
         self.setMinimumWidth(320)
         self.setMinimumHeight(560)
         self.resize(460, 720)
