@@ -522,6 +522,7 @@ class BioSnapDialog(QDialog):
 
         scroll.setWidget(body)
         root.addWidget(scroll)
+        self._set_mode("single")
 
     def _divider(self):
         line = QFrame()
@@ -581,7 +582,7 @@ class BioSnapDialog(QDialog):
 
     _MODE_DEFAULT = (
         "QPushButton {background:#FFFFFF; color:#1C2B1C;"
-        "border:1px solid #D6D9D6; border-radius:8px;"
+        "border:2px solid #D6D9D6; border-radius:8px;"
         "min-width:70px; max-width:70px; min-height:28px; max-height:28px;"
         "font-size:12px;}"
         "QPushButton:hover {background:rgba(46,125,50,0.06);"
@@ -593,7 +594,7 @@ class BioSnapDialog(QDialog):
         "font-size:12px; font-weight:600;}")
     _MODE_ADV_DEFAULT = (
         "QPushButton {background:#FFFFFF; color:#6A1B9A;"
-        "border:1px solid #D6D9D6; border-radius:8px;"
+        "border:2px solid #D6D9D6; border-radius:8px;"
         "min-width:80px; max-width:80px; min-height:28px; max-height:28px;"
         "font-size:12px;}"
         "QPushButton:hover {background:#F3E5F5;"
@@ -637,7 +638,48 @@ class BioSnapDialog(QDialog):
             self._MODE_ACTIVE if mode == "batch" else self._MODE_DEFAULT)
         self._btn_advanced.setStyleSheet(
             self._MODE_ADV_ACTIVE if mode == "advanced" else self._MODE_ADV_DEFAULT)
-        self._search_block.setVisible(mode == "single")
+        self._search_block.setVisible(mode != "advanced")
+        self._btn_add_row.setVisible(mode == "batch")
+        if mode == "batch":
+            self._restore_batch_state()
+        else:
+            self._save_batch_state()
+            for row in list(self._extra_rows):
+                self._remove_search_row(row)
+
+    def _save_batch_state(self):
+        import json
+        rows = [{"rank": self._rank, "text": self._search_field.text()}]
+        for row_frame in self._extra_rows:
+            h = row_frame.layout()
+            rank_btn = h.itemAt(0).widget()
+            field    = h.itemAt(1).widget()
+            rank_text = rank_btn.text().replace("  ▾", "").strip()
+            rows.append({"rank": rank_text, "text": field.text()})
+        from qgis.core import QgsSettings
+        QgsSettings().setValue("biosnap/batch_rows", json.dumps(rows, ensure_ascii=False))
+
+    def _restore_batch_state(self):
+        import json
+        from qgis.core import QgsSettings
+        raw = QgsSettings().value("biosnap/batch_rows", "")
+        if not raw:
+            return
+        try:
+            rows = json.loads(raw)
+        except Exception:
+            return
+        if not rows:
+            return
+        # первая строка — основное поле
+        first = rows[0]
+        self._search_field.setText(first.get("text", ""))
+        self._set_rank(first.get("rank", "Species"))
+        # дополнительные строки
+        for row in rows[1:]:
+            self._add_search_row(
+                rank=row.get("rank", "Species"),
+                text=row.get("text", ""))
 
     def _set_rank(self, rank):
         self._rank = rank
@@ -759,13 +801,105 @@ class BioSnapDialog(QDialog):
             "background-color:#2E7D32; color:#FFFFFF; border:none;"
             "border-radius:6px; font-size:15px;")
 
+        btn_add = QPushButton("+")
+        btn_add.setFixedSize(28, 28)
+        btn_add.setStyleSheet(
+            "QPushButton {background:#E3F2FD; color:#1565C0; border:none;"
+            "border-radius:6px; font-size:16px; font-weight:bold;}"
+            "QPushButton:hover {background:#BBDEFB;}")
+        btn_add.setVisible(False)
+        btn_add.clicked.connect(lambda: self._add_search_row())
+        self._btn_add_row = btn_add
+
         h.addWidget(self._rank_btn)
         h.addWidget(self._search_field)
         h.addWidget(btn_history)
         h.addWidget(btn_search)
+        h.addWidget(btn_add)
 
         v.addWidget(self._search_frame)
+        self._extra_rows = []
         return self._search_block
+
+
+    def _add_search_row(self, rank="Species", text=""):
+        from qgis.PyQt.QtWidgets import QLineEdit, QMenu
+        row_frame = QFrame()
+        row_frame.setFixedHeight(38)
+        row_frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        row_frame.setStyleSheet(
+            "QFrame { background:#FFFFFF; border:1.5px solid #D6D9D6;"
+            "border-radius:8px; }")
+        h = QHBoxLayout(row_frame)
+        h.setContentsMargins(6, 0, 4, 0)
+        h.setSpacing(4)
+
+        rank_val = [rank]
+        rank_btn = QPushButton(rank + "  ▾")
+        rank_btn.setFixedHeight(28)
+        rank_btn.setFixedWidth(92)
+        rank_btn.setStyleSheet(RANK_BTN)
+
+        menu = QMenu(self)
+        menu.setStyleSheet(RANK_MENU)
+        for r in RANKS:
+            a = menu.addAction(r)
+            a.triggered.connect(lambda chk, rb=rank_btn, rv=r: (
+                rb.setText(rv + "  ▾"), rank_val.__setitem__(0, rv)))
+        rank_btn.clicked.connect(
+            lambda: menu.exec_(rank_btn.mapToGlobal(
+                QPoint(0, rank_btn.height()))))
+
+        field = QLineEdit()
+        field.setStyleSheet(
+            "QLineEdit { border:none; background:transparent;"
+            "font-size:12px; color:#1C2B1C; }"
+            "QLineEdit:focus { border:none; }")
+        field.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        ph = QLabel("Type name e.g. Chrysura trimaculata")
+        ph.setStyleSheet(
+            "color:#AAAAAA; font-size:12px; font-style:italic;"
+            "background:transparent; border:none; padding-left:2px;")
+        ph.setAttribute(Qt.WA_TransparentForMouseEvents)
+        ph.setParent(field)
+        ph.move(2, 0)
+        ph.resize(300, 34)
+        ph.show()
+        field.textChanged.connect(lambda: ph.setVisible(not field.text()))
+        if text:
+            field.setText(text)
+            ph.setVisible(False)
+
+        btn_search = QPushButton("🔍")
+        btn_search.setFixedSize(28, 28)
+        btn_search.setStyleSheet(
+            "background-color:#2E7D32; color:#FFFFFF; border:none;"
+            "border-radius:6px; font-size:15px;")
+
+        btn_remove = QPushButton("−")
+        btn_remove.setFixedSize(28, 28)
+        btn_remove.setStyleSheet(
+            "background-color:#D6D9D6; color:#5C6B5C; border:none;"
+            "border-radius:6px; font-size:16px; font-weight:bold;")
+        btn_remove.clicked.connect(lambda: self._remove_search_row(row_frame))
+
+        h.addWidget(rank_btn)
+        h.addWidget(field)
+        h.addWidget(btn_search)
+        h.addWidget(btn_remove)
+
+        self._search_block.setUpdatesEnabled(False)
+        self._search_block.layout().addWidget(row_frame)
+        self._extra_rows.append(row_frame)
+        self._search_block.setUpdatesEnabled(True)
+        row_frame.setVisible(True)
+
+    def _remove_search_row(self, row_frame):
+        if row_frame in self._extra_rows:
+            self._extra_rows.remove(row_frame)
+        row_frame.setParent(None)
+        row_frame.deleteLater()
 
     _TERR_DEFAULT = (
         "QPushButton {background:#FFFFFF; color:#1C2B1C;"
