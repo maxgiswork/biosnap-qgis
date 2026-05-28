@@ -756,7 +756,7 @@ class BioSnapDialog(QDialog):
 
     # ── LISTS TAB (grid layout) ───────────────────────────────
 
-    _CARD_H = 110
+    _CARD_H = 145
 
     def _build_adv_lists_tab(self):
         outer = QWidget()
@@ -799,8 +799,11 @@ class BioSnapDialog(QDialog):
             row_h = QHBoxLayout(row_w)
             row_h.setContentsMargins(0, 0, 0, 0)
             row_h.setSpacing(8)
-            row_h.addWidget(self._build_adv_src_card_compact(src), 1)
+            lc = self._build_adv_src_card_compact(src)
+            lc.setMinimumWidth(160)
+            row_h.addWidget(lc, 1)
             sw = self._build_csv_slot(i)
+            sw.setMinimumWidth(160)
             self._csv_slot_widgets.append(sw)
             row_h.addWidget(sw, 1)
             cl.addWidget(row_w)
@@ -842,30 +845,47 @@ class BioSnapDialog(QDialog):
         color = src["color"]
         card  = QFrame()
         card.setStyleSheet(
-            "QFrame {background:#FFFFFF; border:1px solid #D6D9D6; border-radius:6px;}")
+            "QFrame {background:#FFFFFF; border:none;"
+            "border-left:3px solid " + color + ";}")
         card.setFixedHeight(self._CARD_H)
         card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         v = QVBoxLayout(card)
-        v.setContentsMargins(10, 8, 8, 8)
-        v.setSpacing(4)
-        # row 1: title + toggle
+        v.setContentsMargins(12, 8, 10, 8)
+        v.setSpacing(0)
+
+        # title + toggle
         tr = QWidget(); tr.setStyleSheet("background:transparent;")
         th = QHBoxLayout(tr); th.setContentsMargins(0,0,0,0); th.setSpacing(4)
         lt = QLabel(src["title"])
         lt.setStyleSheet(
-            "font-size:11px; font-weight:600; color:#1C2B1C; background:transparent;")
+            "QLabel {font-size:12px; font-weight:600; color:#1C2B1C;"
+            "background:transparent; border:none; padding:0;}")
         tog = ColoredToggle(color, checked=True)
         th.addWidget(lt); th.addStretch(); th.addWidget(tog)
         v.addWidget(tr)
         self._adv_src_toggles[key] = tog
-        # row 2: subtitle
+
+        # subtitle
         ls = QLabel(src["subtitle"])
-        ls.setStyleSheet("font-size:10px; color:#9CA3AF; background:transparent;")
+        ls.setStyleSheet(
+            "QLabel {font-size:10px; color:#5C6B5C;"
+            "background:transparent; border:none; padding:0; margin-bottom:4px;}")
         ls.setWordWrap(False)
         v.addWidget(ls)
-        # row 3: chips
-        cr = QWidget(); cr.setStyleSheet("background:transparent;")
-        ch = QHBoxLayout(cr); ch.setContentsMargins(0,0,0,0); ch.setSpacing(4)
+
+        # divider
+        dv = QFrame(); dv.setFrameShape(QFrame.HLine)
+        dv.setStyleSheet(
+            "QFrame {border:none; background:#E5E7EB;"
+            "max-height:1px; margin:0;}")
+        dv.setFixedHeight(1)
+        v.addWidget(dv)
+
+        # chips
+        cr = QWidget(); cr.setStyleSheet("QWidget {background:transparent;}")
+        ch = QHBoxLayout(cr)
+        ch.setContentsMargins(0, 4, 0, 4)
+        ch.setSpacing(4)
         self._adv_src_chips[key] = {}
         for cd in src["chips"]:
             ckey = cd["ckey"]
@@ -879,21 +899,27 @@ class BioSnapDialog(QDialog):
             ch.addWidget(btn)
         ch.addStretch()
         v.addWidget(cr)
-        # row 4: Update + count
-        act = QWidget(); act.setStyleSheet("background:transparent;")
-        ah = QHBoxLayout(act); ah.setContentsMargins(0,2,0,0); ah.setSpacing(6)
-        btn_upd = QPushButton("\u21bb Update")
+
+        # Update + count
+        act = QWidget(); act.setStyleSheet("QWidget {background:transparent;}")
+        ah = QHBoxLayout(act)
+        ah.setContentsMargins(0, 0, 0, 0)
+        ah.setSpacing(0)
+        btn_upd = QPushButton("Update")
         btn_upd.setFixedHeight(22)
         btn_upd.setStyleSheet(
-            "QPushButton {background:#F6F5F3; color:#5C6B5C;"
+            "QPushButton {background:#FFFFFF; color:#5C6B5C;"
             "border:1px solid #D6D9D6; border-radius:4px;"
             "font-size:10px; padding:0 8px;}"
-            "QPushButton:hover {background:#F1F8E9; border-color:#A5D6A7; color:#2E7D32;}")
+            "QPushButton:hover {background:#F1F8E9;"
+            "border-color:#A5D6A7; color:#2E7D32;}")
         btn_upd.clicked.connect(lambda c, k=key: self._adv_update_source(k))
         cnt_lbl = QLabel(str(src["count"]) + " species")
-        cnt_lbl.setStyleSheet("font-size:10px; color:#9CA3AF; background:transparent;")
+        cnt_lbl.setStyleSheet(
+            "QLabel {font-size:10px; color:#5C6B5C;"
+            "background:transparent; border:none; padding:0;}")
         cnt_lbl.setObjectName("src_count_" + key)
-        ah.addWidget(btn_upd); ah.addWidget(cnt_lbl); ah.addStretch()
+        ah.addWidget(btn_upd); ah.addStretch(); ah.addWidget(cnt_lbl)
         v.addWidget(act)
         return card
 
@@ -905,70 +931,92 @@ class BioSnapDialog(QDialog):
         slot_data = {"path": None, "name": "", "count": 0, "enabled": True}
         self._csv_slots.append(slot_data)
         container = QWidget()
-        container.setStyleSheet("background:transparent;")
+        container.setStyleSheet("QWidget {background:transparent;}")
         container.setFixedHeight(self._CARD_H)
         container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         cv = QVBoxLayout(container)
         cv.setContentsMargins(0, 0, 0, 0)
         cv.setSpacing(0)
+
         # empty state
         empty = QFrame()
         empty.setObjectName("csv_empty_" + str(idx))
         empty.setStyleSheet(
-            "QFrame {background:#FFFFFF; border:1px dashed #D6D9D6; border-radius:6px;}")
+            "QFrame {background:#FFFFFF; border:none;"
+            "border-left:3px solid #C8C8C8;}")
         empty.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         el = QVBoxLayout(empty)
         el.setAlignment(Qt.AlignCenter)
-        el.setSpacing(3)
+        el.setSpacing(6)
+        circle = QFrame()
+        circle.setFixedSize(38, 38)
+        circle.setStyleSheet(
+            "QFrame {border:2px dashed #C8C8C8;"
+            "border-radius:19px; background:transparent;}")
+        cl_inner = QVBoxLayout(circle)
+        cl_inner.setContentsMargins(0, 0, 0, 0)
         plus = QLabel("+")
         plus.setAlignment(Qt.AlignCenter)
-        plus.setStyleSheet("font-size:20px; color:#D6D9D6; background:transparent;")
+        plus.setStyleSheet(
+            "QLabel {font-size:18px; color:#C8C8C8;"
+            "background:transparent; border:none; padding:0;}")
+        cl_inner.addWidget(plus)
         lcsv = QLabel("Load CSV")
         lcsv.setAlignment(Qt.AlignCenter)
-        lcsv.setStyleSheet("font-size:11px; color:#9CA3AF; background:transparent;")
-        el.addWidget(plus); el.addWidget(lcsv)
+        lcsv.setStyleSheet(
+            "QLabel {font-size:11px; color:#9CA3AF;"
+            "background:transparent; border:none; padding:0;}")
+        el.addWidget(circle, 0, Qt.AlignCenter)
+        el.addWidget(lcsv)
         empty.mousePressEvent = lambda e, i=idx: self._csv_load(i)
         empty.setCursor(Qt.PointingHandCursor)
+
         # loaded state
         loaded = QFrame()
         loaded.setObjectName("csv_loaded_" + str(idx))
         loaded.setStyleSheet(
-            "QFrame {background:#FFFFFF; border:1px solid #D6D9D6;"
-            "border-top:3px solid " + color + "; border-radius:6px;}")
+            "QFrame {background:#FFFFFF; border:none;"
+            "border-left:3px solid #C8C8C8;}")
         loaded.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         loaded.setVisible(False)
         lv = QVBoxLayout(loaded)
-        lv.setContentsMargins(10, 8, 8, 8)
-        lv.setSpacing(4)
-        tr2 = QWidget(); tr2.setStyleSheet("background:transparent;")
-        th2 = QHBoxLayout(tr2); th2.setContentsMargins(0,0,0,0); th2.setSpacing(4)
+        lv.setContentsMargins(12, 8, 8, 8)
+        lv.setSpacing(0)
+        tr2 = QWidget(); tr2.setStyleSheet("QWidget {background:transparent;}")
+        th2 = QHBoxLayout(tr2)
+        th2.setContentsMargins(0, 0, 0, 0); th2.setSpacing(4)
         name_lbl = QLabel("")
         name_lbl.setObjectName("csv_name_" + str(idx))
         name_lbl.setStyleSheet(
-            "font-size:11px; font-weight:600; color:#1C2B1C; background:transparent;")
+            "QLabel {font-size:11px; font-weight:600; color:#1C2B1C;"
+            "background:transparent; border:none; padding:0;}")
         tog2 = ColoredToggle(color, checked=True)
         th2.addWidget(name_lbl); th2.addStretch(); th2.addWidget(tog2)
         lv.addWidget(tr2)
         slot_data["toggle"] = tog2
         slot_data["name_lbl"] = name_lbl
-        meta_w = QWidget(); meta_w.setStyleSheet("background:transparent;")
+        meta_w = QWidget()
+        meta_w.setStyleSheet("QWidget {background:transparent;}")
         meta_h = QHBoxLayout(meta_w)
-        meta_h.setContentsMargins(0,0,0,0); meta_h.setSpacing(6)
+        meta_h.setContentsMargins(0, 4, 0, 4); meta_h.setSpacing(6)
         taxa_badge = QLabel("0 taxa")
         taxa_badge.setObjectName("csv_badge_" + str(idx))
         taxa_badge.setFixedHeight(18)
         taxa_badge.setStyleSheet(
-            "background:" + color + "; color:#FFFFFF;"
-            "border-radius:9px; font-size:10px; font-weight:600; padding:0 7px;")
+            "QLabel {background:" + color + "; color:#FFFFFF;"
+            "border-radius:9px; font-size:10px; font-weight:600;"
+            "padding:0 7px; border:none;}")
         from_lbl = QLabel("from CSV")
-        from_lbl.setStyleSheet("font-size:10px; color:#9CA3AF; background:transparent;")
+        from_lbl.setStyleSheet(
+            "QLabel {font-size:10px; color:#9CA3AF;"
+            "background:transparent; border:none; padding:0;}")
         meta_h.addWidget(taxa_badge); meta_h.addWidget(from_lbl); meta_h.addStretch()
         lv.addWidget(meta_w)
         slot_data["taxa_badge"] = taxa_badge
         lv.addStretch()
-        act_w = QWidget(); act_w.setStyleSheet("background:transparent;")
+        act_w = QWidget(); act_w.setStyleSheet("QWidget {background:transparent;}")
         act_h = QHBoxLayout(act_w)
-        act_h.setContentsMargins(0,0,0,0); act_h.setSpacing(5)
+        act_h.setContentsMargins(0, 0, 0, 0); act_h.setSpacing(5)
         for label, slot_fn in [("\u21c4 Rename", self._csv_rename),
                                 ("\u21bb Reload", self._csv_reload)]:
             b = QPushButton(label)
@@ -977,7 +1025,8 @@ class BioSnapDialog(QDialog):
                 "QPushButton {background:#F6F5F3; color:#5C6B5C;"
                 "border:1px solid #D6D9D6; border-radius:4px;"
                 "font-size:10px; padding:0 8px;}"
-                "QPushButton:hover {background:#F1F8E9; border-color:#A5D6A7; color:#2E7D32;}")
+                "QPushButton:hover {background:#F1F8E9;"
+                "border-color:#A5D6A7; color:#2E7D32;}")
             b.clicked.connect(lambda c, fn=slot_fn, i=idx: fn(i))
             act_h.addWidget(b)
         btn_del = QPushButton("\u00d7 Delete")
