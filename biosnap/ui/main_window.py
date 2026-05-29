@@ -117,31 +117,29 @@ class AccuracySlider(QWidget):
         self._value = value
         self._drag = False
         self._settings_key = 'biosnap/accuracy_slider'
-        self.setFixedHeight(36)
+        self.setFixedHeight(30)
 
     def value(self):
         return self._value
 
     def minimumSizeHint(self):
         from qgis.PyQt.QtCore import QSize
-        return QSize(0, 36)
+        return QSize(0, 30)
 
     def sizeHint(self):
         from qgis.PyQt.QtCore import QSize
-        return QSize(100, 36)
+        return QSize(100, 30)
 
     def _tx(self):
-        tw = self.width() - 20
-        tx = 10
-        ty = 26
+        tw = self.width() - 16
+        tx = 8
+        ty = 20
         return tx, tw, ty
 
     def _mark_x(self, i):
         tx, tw, ty = self._tx()
         n = len(self.MARKS) - 1
-        start = tx + 15
-        end = tx + tw - 15
-        return int(start + i * (end - start) / n)
+        return int(tx + i * tw / n)
 
     def _nearest_mark(self, x):
         dists = [(abs(x - self._mark_x(i)), i) for i in range(len(self.MARKS))]
@@ -172,15 +170,7 @@ class AccuracySlider(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         tx, tw, ty = self._tx()
         x = self._val_to_x(self._value)
-        p.setBrush(QColor('#FFFFFF'))
-        p.setPen(Qt.NoPen)
-        for i in range(len(self.MARKS)):
-            mx = self._mark_x(i)
-            if i == 0:
-                mx = tx + 15
-            elif i == len(self.MARKS) - 1:
-                mx = tx + tw - 15
-            p.drawEllipse(QPointF(float(mx), float(ty)), 3.0, 3.0)
+
         pen = QPen(QColor('#9CA3AF'))
         pen.setWidth(1)
         p.setPen(pen)
@@ -193,17 +183,13 @@ class AccuracySlider(QWidget):
             p.setBrush(GBIF_alpha)
             p.drawRoundedRect(QRectF(tx, ty - 3, tw, 6), 3, 3)
             p.restore()
-        p.setBrush(QColor('#FFFFFF'))
-        p.setPen(Qt.NoPen)
-        for i in range(1, len(self.MARKS) - 1):
-            mx = self._mark_x(i)
-            p.drawEllipse(QPointF(float(mx), float(ty)), 3.0, 3.0)
+
         p.setBrush(GBIF_solid)
         p.setPen(Qt.NoPen)
         p.drawEllipse(x - 7, ty - 7, 14, 14)
         p.setBrush(QColor('#FFFFFF'))
         p.setPen(Qt.NoPen)
-        p.drawEllipse(QPointF(float(x), float(ty)), 4.0, 4.0)
+        p.drawEllipse(QPointF(float(x), float(ty)), 3.0, 3.0)
         p.setPen(QColor('#1C2B1C'))
         fnt = QFont('Segoe UI', 8)
         fnt.setBold(True)
@@ -215,7 +201,7 @@ class AccuracySlider(QWidget):
             txt = f"{self._value} m"
         tw2 = fm.horizontalAdvance(txt)
         lx = max(0, min(self.width() - tw2, x - tw2 // 2))
-        p.drawText(lx, ty - 12, txt)
+        p.drawText(lx, ty - 10, txt)
         p.end()
 
     def _hit(self, x):
@@ -290,6 +276,128 @@ class AccuracySlider(QWidget):
             QgsSettings().setValue(self._settings_key + '/value', self._value)
 
 
+
+
+class _ModePillBtn(QPushButton):
+    """Pill mode button: icon-only inactive, icon+label active."""
+
+    def __init__(self, icon_key, label, parent=None):
+        super().__init__(parent)
+        self._icon_key = icon_key
+        self._label    = label
+        self._active   = False
+        self.setFixedHeight(28)
+        self.setFixedWidth(32)
+        from qgis.PyQt.QtCore import Qt as _Qt
+        self.setCursor(_Qt.PointingHandCursor)
+        self.setFlat(True)
+        self.setStyleSheet(
+            "QPushButton{background:transparent;border:none;padding:0;margin:0;}")
+
+    def setActive(self, active):
+        self._active = active
+        if active:
+            from qgis.PyQt.QtGui import QFont, QFontMetrics
+            fnt = QFont('Segoe UI', 9)
+            fnt.setWeight(75)
+            fw = QFontMetrics(fnt).horizontalAdvance(self._label)
+            self.setFixedWidth(9 + 13 + 5 + fw + 12)
+        else:
+            self.setFixedWidth(32)
+        self.update()
+
+    def paintEvent(self, e):
+        from qgis.PyQt.QtGui import (QPainter, QColor, QPainterPath, QFont)
+        from qgis.PyQt.QtCore import Qt, QRectF
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        W, H = self.width(), self.height()
+        if self._active:
+            bg = QPainterPath()
+            bg.addRoundedRect(QRectF(0, 0, W, H), H / 2.0, H / 2.0)
+            p.fillPath(bg, QColor('#2E7D32'))
+        ic = QColor('#FFFFFF') if self._active else QColor('#8aab8a')
+        self._draw_icon(p, ic, 9.0, (H - 13) / 2.0, 13.0, 13.0)
+        if self._active:
+            fnt = QFont('Segoe UI', 9)
+            fnt.setWeight(75)
+            p.setFont(fnt)
+            p.setPen(QColor('#FFFFFF'))
+            lx = 9 + 13 + 5
+            p.drawText(lx, 0, W - lx - 6, H,
+                       Qt.AlignVCenter | Qt.AlignLeft, self._label)
+        p.end()
+
+    def _draw_icon(self, p, color, x, y, w, h):
+        from qgis.PyQt.QtGui import QPainterPath, QPen, QColor
+        from qgis.PyQt.QtCore import Qt, QPointF
+        cx = x + w / 2.0
+        p.setPen(Qt.NoPen)
+        p.setBrush(color)
+        if self._icon_key == "single":
+            r = w * 0.30
+            head = QPainterPath()
+            head.addEllipse(QPointF(cx, y + r + 0.5), r, r)
+            p.fillPath(head, color)
+            stem = QPainterPath()
+            stem.moveTo(cx - r * 0.65, y + r * 1.7)
+            stem.lineTo(cx + r * 0.65, y + r * 1.7)
+            stem.lineTo(cx, y + h - 0.5)
+            stem.closeSubpath()
+            p.fillPath(stem, color)
+            inner_c = QColor('#2E7D32') if self._active else QColor('#1C2B1C')
+            inner = QPainterPath()
+            inner.addEllipse(QPointF(cx, y + r + 0.5), r * 0.40, r * 0.40)
+            p.fillPath(inner, inner_c)
+        elif self._icon_key == "batch":
+            for (dx, dy, rr) in [(-w*0.30, 0.0,    w*0.16),
+                                   ( w*0.28, -h*0.08, w*0.19),
+                                   ( 0.0,    h*0.28,  w*0.12)]:
+                head2 = QPainterPath()
+                head2.addEllipse(QPointF(cx+dx, y+rr*1.1+dy), rr, rr)
+                p.fillPath(head2, color)
+                stem2 = QPainterPath()
+                stem2.moveTo(cx+dx - rr*0.6, y + rr*1.9 + dy)
+                stem2.lineTo(cx+dx + rr*0.6, y + rr*1.9 + dy)
+                stem2.lineTo(cx+dx,           y + rr*3.4 + dy)
+                stem2.closeSubpath()
+                p.fillPath(stem2, color)
+        elif self._icon_key == "advanced":
+            pen2 = QPen(color, 1.6, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+            p.setPen(pen2)
+            p.setBrush(Qt.NoBrush)
+            path = QPainterPath()
+            path.moveTo(x + 0.5,     y + 1.5)
+            path.lineTo(x + w - 0.5, y + 1.5)
+            path.lineTo(cx + w*0.18, y + h*0.52)
+            path.lineTo(cx + w*0.18, y + h - 1.5)
+            path.lineTo(cx - w*0.18, y + h - 1.5)
+            path.lineTo(cx - w*0.18, y + h*0.52)
+            path.closeSubpath()
+            p.drawPath(path)
+        elif self._icon_key == "games":
+            # Звезда
+            import math
+            star = QPainterPath()
+            n, cx2, cy2 = 5, cx, y + h * 0.42
+            r_out, r_in = w * 0.42, w * 0.18
+            for i in range(n * 2):
+                angle = math.pi / n * i - math.pi / 2
+                r = r_out if i % 2 == 0 else r_in
+                px2 = cx2 + r * math.cos(angle)
+                py2 = cy2 + r * math.sin(angle)
+                if i == 0: star.moveTo(px2, py2)
+                else:       star.lineTo(px2, py2)
+            star.closeSubpath()
+            p.fillPath(star, color)
+            # Ножка трофея
+            pen3 = QPen(color, 1.4, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+            p.setPen(pen3)
+            p.drawLine(QPointF(cx, cy2 + r_out + 0.5),
+                       QPointF(cx, y + h - 2.0))
+            p.drawLine(QPointF(cx - w*0.22, y + h - 2.0),
+                       QPointF(cx + w*0.22, y + h - 2.0))
+
 class YearRangeSlider(QWidget):
 
     def __init__(self, min_year=1500, max_year=2026, start=2000, end=2026, parent=None):
@@ -300,7 +408,7 @@ class YearRangeSlider(QWidget):
         self._end = end
         self._drag = None
         self._settings_key = 'biosnap/year_slider'
-        self.setFixedHeight(36)
+        self.setFixedHeight(30)
         try:
             from qgis.core import QgsSettings
             s = QgsSettings()
@@ -314,14 +422,14 @@ class YearRangeSlider(QWidget):
 
     def minimumSizeHint(self):
         from qgis.PyQt.QtCore import QSize
-        return QSize(0, 36)
+        return QSize(0, 30)
 
     def sizeHint(self):
         from qgis.PyQt.QtCore import QSize
-        return QSize(100, 36)
+        return QSize(100, 30)
 
     def _tx(self):
-        return 10, self.width() - 20, 26
+        return 8, self.width() - 16, 20
 
     def _year_to_x(self, year):
         tx, tw, ty = self._tx()
@@ -369,13 +477,13 @@ class YearRangeSlider(QWidget):
         w1 = fm.horizontalAdvance(txt1)
         w2 = fm.horizontalAdvance(txt2)
         lx1 = max(0, x1 - w1 // 2)
-        lx2 = x2 - w2 // 2
+        lx2 = min(self.width() - w2, x2 - w2 // 2)
         if lx2 < lx1 + w1 + 6:
             mid = (x1 + x2) // 2
             lx1 = max(0, mid - w1 - 3)
             lx2 = min(self.width() - w2, mid + 3)
-        p.drawText(lx1, ty - 12, txt1)
-        p.drawText(lx2, ty - 12, txt2)
+        p.drawText(lx1, ty - 10, txt1)
+        p.drawText(lx2, ty - 10, txt2)
         p.end()
 
     def _hit(self, x):
@@ -578,40 +686,55 @@ class BioSnapDialog(QDialog):
         "font-size:12px; font-weight:600;}")
 
     def _build_mode_bar(self):
+        # Плейсхолдер — кнопки создаются в _create_mode_pill_bar, вызываемом из _build_header
+        placeholder = QWidget()
+        placeholder.setFixedHeight(0)
+        placeholder.setVisible(False)
+        placeholder.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        return placeholder
+
+    def _create_mode_pill_bar(self):
         bar = QFrame()
-        bar.setFixedHeight(44)
         bar.setStyleSheet(
-            "QFrame {background:#FFFFFF; border:none;"
-            "border-bottom:1px solid #E5E7EB;}")
+            "QFrame{background:rgba(0,0,0,60);border-radius:16px;border:none;}")
+        bar.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         h = QHBoxLayout(bar)
-        h.setContentsMargins(16, 7, 16, 7)
-        h.setSpacing(6)
-        lbl = QLabel("Mode")
-        lbl.setStyleSheet(SECTION_LBL)
-        h.addWidget(lbl)
-        h.addSpacing(4)
-        self._btn_single = QPushButton("Single")
-        self._btn_single.setStyleSheet(self._MODE_ACTIVE)
+        h.setContentsMargins(3, 3, 3, 3)
+        h.setSpacing(2)
+
+        def _sep():
+            s = QFrame()
+            s.setFixedSize(1, 14)
+            s.setStyleSheet(
+                "QFrame{background:rgba(255,255,255,40);border:none;}")
+            return s
+
+        self._btn_single   = _ModePillBtn("single",   "Single")
+        self._btn_batch    = _ModePillBtn("batch",    "Batch")
+        self._btn_advanced = _ModePillBtn("advanced", "Advanced")
+        self._btn_games    = _ModePillBtn("games",    "Achievements")
+
         self._btn_single.clicked.connect(lambda: self._set_mode("single"))
-        self._btn_batch = QPushButton("Batch")
-        self._btn_batch.setStyleSheet(self._MODE_DEFAULT)
         self._btn_batch.clicked.connect(lambda: self._set_mode("batch"))
-        self._btn_advanced = QPushButton("Advanced")
-        self._btn_advanced.setStyleSheet(self._MODE_ADV_DEFAULT)
         self._btn_advanced.clicked.connect(lambda: self._set_mode("advanced"))
+        self._btn_games.clicked.connect(lambda: self._set_mode("games"))
+
         h.addWidget(self._btn_single)
+        h.addWidget(_sep())
         h.addWidget(self._btn_batch)
+        h.addWidget(_sep())
         h.addWidget(self._btn_advanced)
-        h.addStretch()
+        h.addWidget(_sep())
+        h.addWidget(self._btn_games)
+
+        self._btn_single.setActive(True)
+        self._btn_games.setVisible(False)
         return bar
 
     def _set_mode(self, mode):
-        self._btn_single.setStyleSheet(
-            self._MODE_ACTIVE if mode == "single" else self._MODE_DEFAULT)
-        self._btn_batch.setStyleSheet(
-            self._MODE_ACTIVE if mode == "batch" else self._MODE_DEFAULT)
-        self._btn_advanced.setStyleSheet(
-            self._MODE_ADV_ACTIVE if mode == "advanced" else self._MODE_ADV_DEFAULT)
+        self._btn_single.setActive(mode == "single")
+        self._btn_batch.setActive(mode == "batch")
+        self._btn_advanced.setActive(mode == "advanced")
 
         if mode == "advanced":
             self._mode = "advanced"
@@ -1218,11 +1341,12 @@ class BioSnapDialog(QDialog):
         header = QFrame()
         header.setObjectName("header")
         header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        header.setFixedHeight(58)
+        header.setFixedHeight(50)
         outer = QHBoxLayout(header)
-        outer.setContentsMargins(16, 0, 16, 0)
+        outer.setContentsMargins(16, 0, 12, 0)
         outer.setSpacing(0)
         outer.setAlignment(Qt.AlignVCenter)
+        # Логотип
         logo_w = QWidget()
         logo_w.setStyleSheet("background:transparent;")
         logo_v = QVBoxLayout(logo_w)
@@ -1238,12 +1362,14 @@ class BioSnapDialog(QDialog):
         lbl_name.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         lbl_sub = QLabel("Quick occurrence loader")
         lbl_sub.setStyleSheet(
-            "color:#9CA3AF; font-size:10px; background:transparent;")
+            "color:#9CA3AF; font-size:9px; background:transparent;")
         lbl_sub.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         logo_v.addWidget(lbl_name)
         logo_v.addWidget(lbl_sub)
         outer.addWidget(logo_w)
         outer.addStretch()
+        # Mode pill bar — справа в хедере
+        outer.addWidget(self._create_mode_pill_bar())
         return header
 
     # ── SEARCH BLOCK ──────────────────────────────────────────
@@ -1793,9 +1919,9 @@ class BioSnapDialog(QDialog):
             w = QWidget()
             w.setStyleSheet("background:transparent;")
             w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            h = QHBoxLayout(w)
+            h = QVBoxLayout(w)
             h.setContentsMargins(0, 0, 0, 0)
-            h.setSpacing(20)
+            h.setSpacing(6)
             yw = QWidget()
             yw.setStyleSheet("background:transparent;")
             yw.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
