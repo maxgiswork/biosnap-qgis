@@ -1547,34 +1547,75 @@ class BioSnapDialog(QDialog):
         "border:2px solid #1C2B1C; border-radius:6px;"
         "padding:4px 10px; font-size:12px; font-weight:600;}")
 
+    # ── SOURCE FILTER CONSTANTS ───────────────────────────────────────────
+    _GBIF_BOR_ITEMS = [
+        ("Human obs.",    "HUMAN_OBSERVATION"),
+        ("Machine obs.",  "MACHINE_OBSERVATION"),
+        ("Preserved sp.", "PRESERVED_SPECIMEN"),
+        ("Fossil sp.",    "FOSSIL_SPECIMEN"),
+        ("Living sp.",    "LIVING_SPECIMEN"),
+        ("Mat. citation", "MATERIAL_CITATION"),
+        ("Mat. sample",   "MATERIAL_SAMPLE"),
+        ("Occurrence",    "OCCURRENCE"),
+    ]
+    _INAT_QG_ITEMS = [
+        ("Research", "research"),
+        ("Needs ID", "needs_id"),
+        ("Casual",   "casual"),
+    ]
+    _INAT_BOR_ITEMS = [
+        ("Human obs.",   "HUMAN_OBSERVATION"),
+        ("Machine obs.", "MACHINE_OBSERVATION"),
+    ]
+
     def _build_source_block(self):
+        self._source    = "gbif"
+        self._menu_open = None
+        self._chip_btns = {}
+        self._load_filter_state_src()
+
         w = QWidget()
         w.setStyleSheet("background:transparent;")
         v = QVBoxLayout(w)
         v.setContentsMargins(0, 0, 0, 0)
         v.setSpacing(4)
         v.addWidget(self._slbl("Source"))
+
         row = QWidget()
         row.setStyleSheet("background:transparent;")
         h = QHBoxLayout(row)
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(6)
-        self._btn_gbif = QPushButton("GBIF")
+
+        self._btn_gbif = QPushButton("GBIF  ▾")
         self._btn_gbif.setFixedHeight(30)
         self._btn_gbif.setStyleSheet(self._SRC_GBIF)
-        self._btn_gbif.clicked.connect(lambda: self._set_source("gbif"))
-        self._btn_inat = QPushButton("iNaturalist")
+        self._btn_gbif.clicked.connect(lambda: self._toggle_source_menu("gbif"))
+
+        self._btn_inat = QPushButton("iNaturalist  ▾")
         self._btn_inat.setFixedHeight(30)
         self._btn_inat.setStyleSheet(self._SRC_DEFAULT)
-        self._btn_inat.clicked.connect(lambda: self._set_source("inat"))
+        self._btn_inat.clicked.connect(lambda: self._toggle_source_menu("inat"))
+
         self._btn_both = QPushButton("Both")
         self._btn_both.setFixedHeight(30)
         self._btn_both.setStyleSheet(self._SRC_DEFAULT)
-        self._btn_both.clicked.connect(lambda: self._set_source("both"))
+        self._btn_both.clicked.connect(lambda: self._toggle_source_menu("both"))
+
         h.addWidget(self._btn_gbif)
         h.addWidget(self._btn_inat)
         h.addWidget(self._btn_both)
         v.addWidget(row)
+
+        self._gbif_menu_widget = self._build_gbif_menu("gbif")
+        self._inat_menu_widget = self._build_inat_menu("inat")
+        self._both_gbif_widget = self._build_gbif_menu("both")
+        self._both_inat_widget = self._build_inat_menu("both")
+        for _mw in (self._gbif_menu_widget, self._inat_menu_widget,
+                    self._both_gbif_widget, self._both_inat_widget):
+            _mw.setVisible(False)
+            v.addWidget(_mw)
+
         return w
 
     def _set_source(self, source):
@@ -1588,6 +1629,157 @@ class BioSnapDialog(QDialog):
         self._btn_gbif.setStyleSheet(g)
         self._btn_inat.setStyleSheet(n)
         self._btn_both.setStyleSheet(b)
+
+    def _toggle_source_menu(self, source):
+        prev = getattr(self, '_source', None)
+        self._set_source(source)
+        if prev == source and self._menu_open == source:
+            self._menu_open = None
+        else:
+            self._menu_open = source
+        self._gbif_menu_widget.setVisible(self._menu_open == "gbif")
+        self._inat_menu_widget.setVisible(self._menu_open == "inat")
+        self._both_gbif_widget.setVisible(self._menu_open == "both")
+        self._both_inat_widget.setVisible(self._menu_open == "both")
+        g_open = self._menu_open in ("gbif", "both")
+        n_open = self._menu_open in ("inat", "both")
+        self._btn_gbif.setText(
+            "GBIF  ▴" if g_open else "GBIF  ▾")
+        self._btn_inat.setText(
+            "iNaturalist  ▴" if n_open else "iNaturalist  ▾")
+
+    def _build_gbif_menu(self, mode):
+        sel_key = "gbif_bor" if mode == "gbif" else "both_bor"
+        panel = QFrame()
+        panel.setStyleSheet(
+            "QFrame {background:#F1F8E9; border:1px solid #C8E6C9;"
+            "border-radius:6px;}"
+            "QLabel {background:transparent; border:none;}")
+        v = QVBoxLayout(panel)
+        v.setContentsMargins(8, 8, 8, 8)
+        v.setSpacing(6)
+        lbl = QLabel("BASIS OF RECORD")
+        lbl.setStyleSheet(
+            "QLabel {font-size:10px; font-weight:500; color:#5C6B5C;"
+            "letter-spacing:0.06em; background:transparent; border:none;}")
+        v.addWidget(lbl)
+        v.addWidget(self._build_chip_section(
+            self._GBIF_BOR_ITEMS, self._sel[sel_key], sel_key, "#2E7D32"))
+        return panel
+
+    def _build_inat_menu(self, mode):
+        sel_key = "inat_qg" if mode == "inat" else "both_qg"
+        panel = QFrame()
+        panel.setStyleSheet(
+            "QFrame {background:#E3F2FD; border:1px solid #BBDEFB;"
+            "border-radius:6px;}"
+            "QLabel {background:transparent; border:none;}")
+        v = QVBoxLayout(panel)
+        v.setContentsMargins(8, 8, 8, 8)
+        v.setSpacing(6)
+        lbl_qg = QLabel("QUALITY GRADE")
+        lbl_qg.setStyleSheet(
+            "QLabel {font-size:10px; font-weight:500; color:#5C6B5C;"
+            "letter-spacing:0.06em; background:transparent; border:none;}")
+        v.addWidget(lbl_qg)
+        v.addWidget(self._build_chip_section(
+            self._INAT_QG_ITEMS, self._sel[sel_key], sel_key, "#1565C0"))
+        return panel
+
+    def _build_chip_section(self, items, sel_set, prefix, color):
+        all_vals  = set(v for _, v in items)
+        all_items = [("All", "__all__")] + list(items)
+        COLS = 4 if len(all_items) <= 5 else 3
+        container = QWidget()
+        container.setStyleSheet("background:transparent;")
+        flow = QVBoxLayout(container)
+        flow.setContentsMargins(0, 0, 0, 0)
+        flow.setSpacing(4)
+        row_w, row_h = None, None
+        for i, (label, value) in enumerate(all_items):
+            if i % COLS == 0:
+                row_w = QWidget()
+                row_w.setStyleSheet("background:transparent;")
+                row_h = QHBoxLayout(row_w)
+                row_h.setContentsMargins(0, 0, 0, 0)
+                row_h.setSpacing(4)
+                flow.addWidget(row_w)
+            btn = QPushButton(label)
+            btn.setFixedHeight(22)
+            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            is_active = (
+                (value == "__all__" and sel_set == all_vals) or
+                (value != "__all__" and value in sel_set)
+            )
+            btn.setStyleSheet(self._filter_chip_css(color, is_active))
+            self._chip_btns["{0}:{1}".format(prefix, value)] = btn
+            btn.clicked.connect(
+                lambda _=None, p=prefix, v=value, c=color, av=all_vals:
+                self._toggle_filter_chip(p, v, c, av))
+            row_h.addWidget(btn)
+        return container
+
+    def _filter_chip_css(self, color, active):
+        _BG = {"#2E7D32": "#C8E6C9", "#1565C0": "#BBDEFB"}
+        if active:
+            bg = _BG.get(color, "#C8E6C9")
+            return (
+                "QPushButton {background:" + bg + "; color:" + color + ";"
+                "border:2px solid " + color + "; border-radius:3px;"
+                "padding:1px 6px; font-size:10px; font-weight:600;"
+                "min-height:20px;}"
+            )
+        return (
+            "QPushButton {background:#FFFFFF; color:#5C6B5C;"
+            "border:1px solid #D6D9D6; border-radius:3px;"
+            "padding:1px 6px; font-size:10px; min-height:20px;}"
+            "QPushButton:hover {border-color:" + color + "; color:" + color + ";}"
+        )
+
+    def _toggle_filter_chip(self, prefix, value, color, all_vals):
+        sel = self._sel.get(prefix)
+        if sel is None:
+            return
+        if value == "__all__":
+            if sel == all_vals:
+                sel.clear()
+            else:
+                sel.clear()
+                sel.update(all_vals)
+        else:
+            if value in sel:
+                sel.discard(value)
+            else:
+                sel.add(value)
+        for val in all_vals:
+            btn = self._chip_btns.get("{0}:{1}".format(prefix, val))
+            if btn:
+                btn.setStyleSheet(self._filter_chip_css(color, val in sel))
+        all_btn = self._chip_btns.get("{0}:__all__".format(prefix))
+        if all_btn:
+            all_btn.setStyleSheet(
+                self._filter_chip_css(color, sel == all_vals))
+        self._save_filter_state_src()
+
+    def _save_filter_state_src(self):
+        import json
+        s = QgsSettings()
+        for key, vals in self._sel.items():
+            s.setValue("biosnap/filter2/" + key, json.dumps(list(vals)))
+
+    def _load_filter_state_src(self):
+        import json
+        s = QgsSettings()
+        self._sel = {}
+        for key in ("gbif_bor", "inat_qg", "both_bor", "both_qg"):
+            raw = s.value("biosnap/filter2/" + key, "")
+            if raw:
+                try:
+                    self._sel[key] = set(json.loads(raw))
+                    continue
+                except Exception:
+                    pass
+            self._sel[key] = set()
 
     # ── YEAR / ACCURACY ───────────────────────────────────────
 
