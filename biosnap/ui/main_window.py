@@ -19,7 +19,7 @@ CHIP_SM_OFF = ("background-color:#ECECF0; color:#1A1A22; border:none;"
                "border-radius:10px; padding:3px 12px; font-size:11px;")
 SECTION_LBL = ("font-size:10px; color:#6B7280; font-weight:bold;"
                "background:transparent; margin-bottom:2px;")
-FIELD = ("border:1px solid #E5E7EB; border-radius:6px;"
+FIELD = ("border:1px solid #E0E0E0; border-radius:6px;"
          "padding:4px 8px; background:#FFFFFF; font-size:12px;")
 SEARCH_FRAME_NORMAL = ("QFrame { background:#FFFFFF; border:1.5px solid #E5E7EB;"
                        "border-radius:8px; }")
@@ -27,7 +27,7 @@ SEARCH_FRAME_FOCUS  = ("QFrame { background:#FFFFFF; border:1.5px solid #1A1A22;
                        "border-radius:8px; }")
 RANK_BTN  = ("background-color:#ECECF0; color:#1A1A22; border:none;"
              "border-radius:6px; padding:0 8px; font-size:11px;")
-RANK_MENU = ("QMenu { background:#FFFFFF; border:1px solid #E5E7EB;"
+RANK_MENU = ("QMenu { background:#FFFFFF; border:1px solid #E0E0E0;"
              "font-size:11px; padding:2px; }"
              "QMenu::item { padding:5px 16px; color:#1A1A22; }"
              "QMenu::item:selected { background:#1A1A22; color:#FFFFFF; }")
@@ -398,6 +398,117 @@ class _ModePillBtn(QPushButton):
             p.drawLine(QPointF(cx - w*0.22, y + h - 2.0),
                        QPointF(cx + w*0.22, y + h - 2.0))
 
+
+
+class _ClickFrame(QFrame):
+    """QFrame с рабочим mousePressEvent через proper subclassing."""
+    def __init__(self, callback, parent=None):
+        super().__init__(parent)
+        self._click_cb = callback
+        from qgis.PyQt.QtCore import Qt as _Qt
+        self.setCursor(_Qt.PointingHandCursor)
+    def mousePressEvent(self, e):
+        if self._click_cb:
+            self._click_cb()
+
+
+class _CheckIndicator(QWidget):
+    """Квадратный индикатор с галочкой через QPainter."""
+    def __init__(self, color="#2E7D32", parent=None):
+        super().__init__(parent)
+        self._color   = color
+        self._checked = False
+        self.setFixedSize(15, 15)
+        self.setAttribute(__import__('qgis.PyQt.QtCore', fromlist=['Qt']).Qt.WA_StyledBackground, False)
+        self.setStyleSheet("background:transparent;border:none;padding:0;margin:0;")
+        self.setAttribute(__import__('qgis.PyQt.QtCore', fromlist=['Qt']).Qt.WA_StyledBackground, False)
+        self.setStyleSheet("background:transparent;border:none;padding:0;margin:0;")
+
+    def setChecked(self, v):
+        self._checked = bool(v)
+        self.update()
+
+    def paintEvent(self, e):
+        from qgis.PyQt.QtGui import QPainter, QColor, QPen, QPainterPath
+        from qgis.PyQt.QtCore import Qt, QRectF, QPointF
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        W, H = self.width(), self.height()
+        if self._checked:
+            p.setBrush(QColor(self._color))
+            p.setPen(Qt.NoPen)
+            path = QPainterPath()
+            path.addRoundedRect(QRectF(0, 0, W, H), 3, 3)
+            p.fillPath(path, QColor(self._color))
+            pen = QPen(QColor('#FFFFFF'), 1.8, Qt.SolidLine,
+                       Qt.RoundCap, Qt.RoundJoin)
+            p.setPen(pen)
+            p.drawLine(QPointF(W*0.2, H*0.52),
+                       QPointF(W*0.42, H*0.75))
+            p.drawLine(QPointF(W*0.42, H*0.75),
+                       QPointF(W*0.80, H*0.28))
+        else:
+            pen = QPen(QColor('#D1D5DB'), 1.5)
+            p.setPen(pen)
+            p.setBrush(QColor('#FFFFFF'))
+            path2 = QPainterPath()
+            path2.addRoundedRect(QRectF(0.75, 0.75, W-1.5, H-1.5), 2.5, 2.5)
+            p.drawPath(path2)
+        p.end()
+
+class _SrcCheckRow(QWidget):
+    """Кликабельная строка-чекбокс для Source-панели."""
+
+    def __init__(self, label, value, checked=False, color="#2E7D32", parent=None):
+        super().__init__(parent)
+        from qgis.PyQt.QtCore import Qt as _Qt
+        self._checked  = checked
+        self._color    = color
+        self._value    = value
+        self._callback = None
+        self.setCursor(_Qt.PointingHandCursor)
+        self.setFixedHeight(22)
+        self.setStyleSheet("background:transparent;")
+        h = QHBoxLayout(self)
+        h.setContentsMargins(0, 2, 0, 2)
+        h.setSpacing(7)
+        self._ind = _CheckIndicator(color)
+        self._ind.setFixedSize(15, 15)
+        self._ind.setChecked(checked)
+        self._lbl = QLabel(label)
+        h.addWidget(self._ind)
+        h.addWidget(self._lbl)
+        h.addStretch()
+        self._refresh_lbl()
+
+    def value(self):     return self._value
+    def isChecked(self): return self._checked
+
+    def setChecked(self, v):
+        self._checked = bool(v)
+        self._ind.setChecked(self._checked)
+        self._refresh_lbl()
+
+    def setCallback(self, fn):
+        self._callback = fn
+
+    def _refresh_lbl(self):
+        if self._checked:
+            self._lbl.setStyleSheet(
+                "QLabel{font-size:11px;color:#1C2B1C;font-weight:600;"
+                "background:transparent;border:none;padding:0;}")
+        else:
+            self._lbl.setStyleSheet(
+                "QLabel{font-size:11px;color:#9CA3AF;"
+                "background:transparent;border:none;padding:0;}")
+
+    def mousePressEvent(self, e):
+        self._checked = not self._checked
+        self._ind.setChecked(self._checked)
+        self._refresh_lbl()
+        if self._callback:
+            self._callback(self._checked, self._value)
+
 class YearRangeSlider(QWidget):
 
     def __init__(self, min_year=1500, max_year=2026, start=2000, end=2026, parent=None):
@@ -641,7 +752,13 @@ class BioSnapDialog(QDialog):
         bl.addWidget(self._divider_after_search)
         bl.addWidget(self._build_territory_block())
         bl.addWidget(self._divider())
-        bl.addWidget(self._build_source_block())
+        self._source_stack = QStackedWidget()
+        self._source_stack.setStyleSheet('background:transparent;')
+        self._source_stack.setContentsMargins(0, 0, 0, 0)
+        for _sm in ('single', 'batch'):
+            self._source_stack.addWidget(self._build_source_block(_sm))
+        self._source_stack.setCurrentIndex(0)
+        bl.addWidget(self._source_stack)
         bl.addWidget(self._divider())
         bl.addWidget(self._build_year_accuracy_block())
         bl.addWidget(self._build_toggles_block())
@@ -664,18 +781,18 @@ class BioSnapDialog(QDialog):
 
     _MODE_DEFAULT = (
         "QPushButton {background:#FFFFFF; color:#1C2B1C;"
-        "border:2px solid #D6D9D6; border-radius:8px;"
+        "border:1px solid #E0E0E0; border-radius:8px;"
         "min-width:70px; max-width:70px; min-height:28px; max-height:28px;"
         "font-size:12px;}"
         "QPushButton:hover {background:rgba(46,125,50,0.06); border-color:#A5D6A7;}")
     _MODE_ACTIVE = (
         "QPushButton {background:#C8E6C9; color:#2E7D32;"
-        "border:2px solid #2E7D32; border-radius:8px;"
+        "border:1px solid #E0E0E0; border-radius:8px;"
         "min-width:70px; max-width:70px; min-height:28px; max-height:28px;"
         "font-size:12px; font-weight:600;}")
     _MODE_ADV_DEFAULT = (
         "QPushButton {background:#FFFFFF; color:#6A1B9A;"
-        "border:2px solid #D6D9D6; border-radius:8px;"
+        "border:1px solid #E0E0E0; border-radius:8px;"
         "min-width:80px; max-width:80px; min-height:28px; max-height:28px;"
         "font-size:12px;}"
         "QPushButton:hover {background:#F3E5F5; border-color:#AB47BC;}")
@@ -757,6 +874,9 @@ class BioSnapDialog(QDialog):
             self._sliders_stack.setCurrentIndex(idx)
             self._year_slider     = self._year_sliders.get(mode, self._year_sliders["single"])
             self._accuracy_slider = self._accuracy_sliders.get(mode, self._accuracy_sliders["single"])
+        if hasattr(self, "_source_stack"):
+            idx = {"single": 0, "batch": 1}.get(mode, 0)
+            self._source_stack.setCurrentIndex(idx)
         if mode == "batch":
             self._restore_batch_state()
         else:
@@ -941,7 +1061,7 @@ class BioSnapDialog(QDialog):
         btn_reset.setFixedHeight(30)
         btn_reset.setStyleSheet(
             "QPushButton {background:#FFFFFF; color:#5C6B5C;"
-            "border:1px solid #D6D9D6; border-radius:6px;"
+            "border:1px solid #E0E0E0; border-radius:6px;"
             "font-size:11px; padding:0 12px;}"
             "QPushButton:hover {background:#F1F8E9; border-color:#A5D6A7;}")
         btn_reset.clicked.connect(self._adv_reset_defaults)
@@ -1032,7 +1152,7 @@ class BioSnapDialog(QDialog):
         btn_upd.setFixedHeight(22)
         btn_upd.setStyleSheet(
             "QPushButton {background:#FFFFFF; color:#5C6B5C;"
-            "border:1px solid #D6D9D6; border-radius:4px;"
+            "border:1px solid #E0E0E0; border-radius:4px;"
             "font-size:10px; padding:0 8px;}"
             "QPushButton:hover {background:#F1F8E9;"
             "border-color:#A5D6A7; color:#2E7D32;}")
@@ -1146,7 +1266,7 @@ class BioSnapDialog(QDialog):
             b.setFixedHeight(22)
             b.setStyleSheet(
                 "QPushButton {background:#F6F5F3; color:#5C6B5C;"
-                "border:1px solid #D6D9D6; border-radius:4px;"
+                "border:1px solid #E0E0E0; border-radius:4px;"
                 "font-size:10px; padding:0 8px;}"
                 "QPushButton:hover {background:#F1F8E9;"
                 "border-color:#A5D6A7; color:#2E7D32;}")
@@ -1235,7 +1355,7 @@ class BioSnapDialog(QDialog):
                     "border:none; border-radius:8px;"
                     "padding:0 6px; font-size:10px; font-weight:600; min-height:20px;}")
         return ("QPushButton {background:#FFFFFF; color:#5C6B5C;"
-                "border:1px solid #D6D9D6; border-radius:8px;"
+                "border:1px solid #E0E0E0; border-radius:8px;"
                 "padding:0 6px; font-size:10px; min-height:20px;}"
                 "QPushButton:hover {border-color:" + color + "; color:" + color + ";}")
 
@@ -1595,12 +1715,12 @@ class BioSnapDialog(QDialog):
 
     _TERR_DEFAULT = (
         "QPushButton {background:#FFFFFF; color:#1C2B1C;"
-        "border:1px solid #D6D9D6; border-radius:6px;"
+        "border:1px solid #E0E0E0; border-radius:6px;"
         "padding:4px 6px; font-size:12px;}"
         "QPushButton:hover {background:#BBDEFB; border-color:#1565C0; color:#1565C0;}")
     _TERR_ACTIVE = (
         "QPushButton {background:#E3F2FD; color:#1565C0;"
-        "border:2px solid #1565C0; border-radius:6px;"
+        "border:1px solid #E0E0E0; border-radius:6px;"
         "padding:4px 6px; font-size:12px; font-weight:600;}")
 
     def _build_territory_block(self):
@@ -1657,20 +1777,20 @@ class BioSnapDialog(QDialog):
 
     _SRC_DEFAULT = (
         "QPushButton {background:#FFFFFF; color:#1C2B1C;"
-        "border:1px solid #D6D9D6; border-radius:6px;"
+        "border:1px solid #E0E0E0; border-radius:6px;"
         "padding:4px 10px; font-size:12px;}"
         "QPushButton:hover {background:rgba(46,125,50,0.06); border-color:#A5D6A7;}")
     _SRC_GBIF = (
         "QPushButton {background:#C8E6C9; color:#2E7D32;"
-        "border:2px solid #2E7D32; border-radius:6px;"
+        "border:1px solid #E0E0E0; border-radius:6px;"
         "padding:4px 10px; font-size:12px; font-weight:600;}")
     _SRC_INAT = (
         "QPushButton {background:#E3F2FD; color:#1565C0;"
-        "border:2px solid #1565C0; border-radius:6px;"
+        "border:1px solid #E0E0E0; border-radius:6px;"
         "padding:4px 10px; font-size:12px; font-weight:600;}")
     _SRC_BOTH = (
         "QPushButton {background:#F0F0F0; color:#1C2B1C;"
-        "border:2px solid #1C2B1C; border-radius:6px;"
+        "border:1px solid #E0E0E0; border-radius:6px;"
         "padding:4px 10px; font-size:12px; font-weight:600;}")
 
     # ── SOURCE FILTER CONSTANTS ───────────────────────────────────────────
@@ -1694,11 +1814,38 @@ class BioSnapDialog(QDialog):
         ("Machine obs.", "MACHINE_OBSERVATION"),
     ]
 
-    def _build_source_block(self):
-        self._source    = "gbif"
-        self._menu_open = None
-        self._chip_btns = {}
-        self._load_filter_state_src()
+    # ── SOURCE ITEMS ─────────────────────────────────────────────
+    _GBIF_BOR_ITEMS = [
+        ("Human observation",   "HUMAN_OBSERVATION"),
+        ("Machine observation", "MACHINE_OBSERVATION"),
+        ("Preserved specimen",  "PRESERVED_SPECIMEN"),
+        ("Fossil specimen",     "FOSSIL_SPECIMEN"),
+        ("Living specimen",     "LIVING_SPECIMEN"),
+        ("Material citation",   "MATERIAL_CITATION"),
+        ("Material sample",     "MATERIAL_SAMPLE"),
+        ("Occurrence",          "OCCURRENCE"),
+    ]
+    _INAT_QG_ITEMS = [
+        ("Research Grade", "research"),
+        ("Needs ID",       "needs_id"),
+        ("Casual",         "casual"),
+    ]
+    _INAT_BOR_ITEMS = [
+        ("Human observation",   "HUMAN_OBSERVATION"),
+        ("Machine observation", "MACHINE_OBSERVATION"),
+        ("Preserved specimen",  "PRESERVED_SPECIMEN"),
+    ]
+
+    def _build_source_block(self, mode="single"):
+        pfx = mode
+        setattr(self, f'_src_open_{pfx}',       {"gbif": False, "inat": False})
+        setattr(self, f'_src_check_rows_{pfx}',  {"gbif": [], "inat": []})
+        setattr(self, f'_src_cards_{pfx}',       {})
+        setattr(self, f'_src_panels_{pfx}',      {})
+        setattr(self, f'_src_badges_{pfx}',      {})
+        setattr(self, f'_src_arrows_{pfx}',      {})
+        setattr(self, f'_src_name_lbls_{pfx}',   {})
+        self._load_filter_state_src(mode)
 
         w = QWidget()
         w.setStyleSheet("background:transparent;")
@@ -1707,41 +1854,28 @@ class BioSnapDialog(QDialog):
         v.setSpacing(4)
         v.addWidget(self._slbl("Source"))
 
-        row = QWidget()
-        row.setStyleSheet("background:transparent;")
-        h = QHBoxLayout(row)
+        row_w = QWidget()
+        row_w.setStyleSheet("background:transparent;")
+        h = QHBoxLayout(row_w)
         h.setContentsMargins(0, 0, 0, 0)
         h.setSpacing(6)
+        from qgis.PyQt.QtCore import Qt as _Qt2
+        gbif_card = self._build_src_card("gbif", mode)
+        inat_card = self._build_src_card("inat", mode)
+        gbif_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        inat_card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        h.addWidget(gbif_card, 0, _Qt2.AlignTop)
+        h.addWidget(inat_card, 0, _Qt2.AlignTop)
+        v.addWidget(row_w)
 
-        self._btn_gbif = QPushButton("GBIF  ▾")
-        self._btn_gbif.setFixedHeight(30)
-        self._btn_gbif.setStyleSheet(self._SRC_GBIF)
-        self._btn_gbif.clicked.connect(lambda: self._toggle_source_menu("gbif"))
+        warn = QLabel("⚠  Both inactive — no data will load")
+        warn.setStyleSheet(
+            "QLabel{color:#F59E0B;font-size:10px;"
+            "background:transparent;border:none;padding:2px 0 0 0;}")
+        setattr(self, f'_src_warn_{pfx}', warn)
+        v.addWidget(warn)
 
-        self._btn_inat = QPushButton("iNaturalist  ▾")
-        self._btn_inat.setFixedHeight(30)
-        self._btn_inat.setStyleSheet(self._SRC_DEFAULT)
-        self._btn_inat.clicked.connect(lambda: self._toggle_source_menu("inat"))
-
-        self._btn_both = QPushButton("Both")
-        self._btn_both.setFixedHeight(30)
-        self._btn_both.setStyleSheet(self._SRC_DEFAULT)
-        self._btn_both.clicked.connect(lambda: self._toggle_source_menu("both"))
-
-        h.addWidget(self._btn_gbif)
-        h.addWidget(self._btn_inat)
-        h.addWidget(self._btn_both)
-        v.addWidget(row)
-
-        self._gbif_menu_widget = self._build_gbif_menu("gbif")
-        self._inat_menu_widget = self._build_inat_menu("inat")
-        self._both_gbif_widget = self._build_gbif_menu("both")
-        self._both_inat_widget = self._build_inat_menu("both")
-        for _mw in (self._gbif_menu_widget, self._inat_menu_widget,
-                    self._both_gbif_widget, self._both_inat_widget):
-            _mw.setVisible(False)
-            v.addWidget(_mw)
-
+        self._update_src_state(mode)
         return w
 
     def _set_source(self, source):
@@ -1757,155 +1891,283 @@ class BioSnapDialog(QDialog):
         self._btn_both.setStyleSheet(b)
 
     def _toggle_source_menu(self, source):
-        prev = getattr(self, '_source', None)
-        self._set_source(source)
-        if prev == source and self._menu_open == source:
-            self._menu_open = None
-        else:
-            self._menu_open = source
-        self._gbif_menu_widget.setVisible(self._menu_open == "gbif")
-        self._inat_menu_widget.setVisible(self._menu_open == "inat")
-        self._both_gbif_widget.setVisible(self._menu_open == "both")
-        self._both_inat_widget.setVisible(self._menu_open == "both")
-        g_open = self._menu_open in ("gbif", "both")
-        n_open = self._menu_open in ("inat", "both")
-        self._btn_gbif.setText(
-            "GBIF  ▴" if g_open else "GBIF  ▾")
-        self._btn_inat.setText(
-            "iNaturalist  ▴" if n_open else "iNaturalist  ▾")
+        # stub — сохранён для совместимости
+        pass
 
-    def _build_gbif_menu(self, mode):
-        sel_key = "gbif_bor" if mode == "gbif" else "both_bor"
+    def _set_source(self, source):
+        self._source = source
+
+    def _toggle_src_card(self, src_id, mode):
+        d = getattr(self, f'_src_open_{mode}')
+        d[src_id] = not d[src_id]
+        self._update_src_state(mode)
+
+    def _build_src_card(self, src_id, mode):
+        color     = "#2E7D32" if src_id == "gbif" else "#1565C0"
+        bg_active = "#F1F8E9" if src_id == "gbif" else "#E3F2FD"
+        pfx       = mode
+
+        card = QFrame()
+        card.setObjectName(f"src_card_{src_id}_{mode}")
+        card.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        card.setStyleSheet(
+            f"QFrame#src_card_{src_id}_{mode}"
+            "{background:#FFFFFF;border:1.5px solid #E5E7EB;border-radius:6px;}")
+
+        vl = QVBoxLayout(card)
+        vl.setContentsMargins(0, 0, 0, 0)
+        vl.setSpacing(0)
+
+        # ─ Header ─
+        def _head_cb(sid=src_id, m=mode):
+            self._toggle_src_card(sid, m)
+
+        head = _ClickFrame(_head_cb)
+        head.setObjectName(f"src_head_{src_id}_{mode}")
+        head.setFixedHeight(34)
+        head.setStyleSheet("QFrame{background:transparent;border:none;}")
+        hl = QHBoxLayout(head)
+        hl.setContentsMargins(10, 0, 10, 0)
+        hl.setSpacing(6)
+
+        name_lbl = QLabel("GBIF" if src_id == "gbif" else "iNaturalist")
+        name_lbl.setStyleSheet(
+            "QLabel{font-size:12px;font-weight:600;color:#9CA3AF;"
+            "background:transparent;border:none;padding:0;}")
+        hl.addWidget(name_lbl)
+        hl.addStretch()
+
+        from qgis.PyQt.QtCore import Qt as _Qt
+        badge = QLabel("0")
+        badge.setFixedSize(18, 18)
+        badge.setAlignment(_Qt.AlignCenter)
+        badge.setStyleSheet(
+            "QLabel{background:#F59E0B;color:#FFFFFF;font-size:9px;"
+            "font-weight:700;border-radius:9px;padding:0;}")
+        badge.setVisible(False)
+        hl.addWidget(badge)
+
+        arrow = QLabel("▾")
+        arrow.setStyleSheet(
+            "QLabel{color:#9CA3AF;font-size:11px;"
+            "background:transparent;border:none;padding:0 0 0 4px;}")
+        hl.addWidget(arrow)
+        vl.addWidget(head)
+
+        # ─ Panel ─
         panel = QFrame()
-        panel.setStyleSheet(
-            "QFrame {background:#F1F8E9; border:1px solid #C8E6C9;"
-            "border-radius:6px;}"
-            "QLabel {background:transparent; border:none;}")
-        v = QVBoxLayout(panel)
-        v.setContentsMargins(8, 8, 8, 8)
-        v.setSpacing(6)
-        lbl = QLabel("BASIS OF RECORD")
-        lbl.setStyleSheet(
-            "QLabel {font-size:10px; font-weight:500; color:#5C6B5C;"
-            "letter-spacing:0.06em; background:transparent; border:none;}")
-        v.addWidget(lbl)
-        v.addWidget(self._build_chip_section(
-            self._GBIF_BOR_ITEMS, self._sel[sel_key], sel_key, "#2E7D32"))
-        return panel
+        panel.setObjectName(f"src_panel_{src_id}_{mode}")
+        panel.setStyleSheet("QFrame{background:transparent;border:none;}")
+        panel.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        panel.setVisible(False)
+        pl = QVBoxLayout(panel)
+        pl.setContentsMargins(10, 8, 10, 10)
+        pl.setSpacing(2)
 
-    def _build_inat_menu(self, mode):
-        sel_key = "inat_qg" if mode == "inat" else "both_qg"
-        panel = QFrame()
-        panel.setStyleSheet(
-            "QFrame {background:#E3F2FD; border:1px solid #BBDEFB;"
-            "border-radius:6px;}"
-            "QLabel {background:transparent; border:none;}")
-        v = QVBoxLayout(panel)
-        v.setContentsMargins(8, 8, 8, 8)
-        v.setSpacing(6)
-        lbl_qg = QLabel("QUALITY GRADE")
-        lbl_qg.setStyleSheet(
-            "QLabel {font-size:10px; font-weight:500; color:#5C6B5C;"
-            "letter-spacing:0.06em; background:transparent; border:none;}")
-        v.addWidget(lbl_qg)
-        v.addWidget(self._build_chip_section(
-            self._INAT_QG_ITEMS, self._sel[sel_key], sel_key, "#1565C0"))
-        return panel
+        rows = []
+        sel_by_mode = getattr(self, f'_sel_{mode}', {})
 
-    def _build_chip_section(self, items, sel_set, prefix, color):
-        all_vals  = set(v for _, v in items)
-        all_items = [("All", "__all__")] + list(items)
-        COLS = 4 if len(all_items) <= 5 else 3
-        container = QWidget()
-        container.setStyleSheet("background:transparent;")
-        flow = QVBoxLayout(container)
-        flow.setContentsMargins(0, 0, 0, 0)
-        flow.setSpacing(4)
-        row_w, row_h = None, None
-        for i, (label, value) in enumerate(all_items):
-            if i % COLS == 0:
-                row_w = QWidget()
-                row_w.setStyleSheet("background:transparent;")
-                row_h = QHBoxLayout(row_w)
-                row_h.setContentsMargins(0, 0, 0, 0)
-                row_h.setSpacing(4)
-                flow.addWidget(row_w)
-            btn = QPushButton(label)
-            btn.setFixedHeight(22)
-            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-            is_active = (
-                (value == "__all__" and sel_set == all_vals) or
-                (value != "__all__" and value in sel_set)
-            )
-            btn.setStyleSheet(self._filter_chip_css(color, is_active))
-            self._chip_btns["{0}:{1}".format(prefix, value)] = btn
-            btn.clicked.connect(
-                lambda _=None, p=prefix, v=value, c=color, av=all_vals:
-                self._toggle_filter_chip(p, v, c, av))
-            row_h.addWidget(btn)
-        return container
-
-    def _filter_chip_css(self, color, active):
-        _BG = {"#2E7D32": "#C8E6C9", "#1565C0": "#BBDEFB"}
-        if active:
-            bg = _BG.get(color, "#C8E6C9")
-            return (
-                "QPushButton {background:" + bg + "; color:" + color + ";"
-                "border:2px solid " + color + "; border-radius:3px;"
-                "padding:1px 6px; font-size:10px; font-weight:600;"
-                "min-height:20px;}"
-            )
-        return (
-            "QPushButton {background:#FFFFFF; color:#5C6B5C;"
-            "border:1px solid #D6D9D6; border-radius:3px;"
-            "padding:1px 6px; font-size:10px; min-height:20px;}"
-            "QPushButton:hover {border-color:" + color + "; color:" + color + ";}"
-        )
-
-    def _toggle_filter_chip(self, prefix, value, color, all_vals):
-        sel = self._sel.get(prefix)
-        if sel is None:
-            return
-        if value == "__all__":
-            if sel == all_vals:
-                sel.clear()
-            else:
-                sel.clear()
-                sel.update(all_vals)
+        if src_id == "gbif":
+            sec = QLabel("BASIS OF RECORD")
+            sec.setStyleSheet(
+                "QLabel{font-size:9px;font-weight:600;color:#9CA3AF;"
+                "letter-spacing:0.08em;background:transparent;"
+                "border:none;padding:0 0 4px 0;}")
+            pl.addWidget(sec)
+            for lbl_txt, val in self._GBIF_BOR_ITEMS:
+                sel = sel_by_mode.get("gbif_bor", set())
+                r = _SrcCheckRow(lbl_txt, val, val in sel, color)
+                r.setCallback(lambda chk, v, k="gbif_bor", sid=src_id, m=mode:
+                    self._on_src_check(sid, k, v, chk, m))
+                pl.addWidget(r)
+                rows.append(r)
         else:
-            if value in sel:
-                sel.discard(value)
-            else:
-                sel.add(value)
-        for val in all_vals:
-            btn = self._chip_btns.get("{0}:{1}".format(prefix, val))
-            if btn:
-                btn.setStyleSheet(self._filter_chip_css(color, val in sel))
-        all_btn = self._chip_btns.get("{0}:__all__".format(prefix))
-        if all_btn:
-            all_btn.setStyleSheet(
-                self._filter_chip_css(color, sel == all_vals))
-        self._save_filter_state_src()
+            sec_bor = QLabel("BASIS OF RECORD")
+            sec_bor.setStyleSheet(
+                "QLabel{font-size:9px;font-weight:600;color:#9CA3AF;"
+                "letter-spacing:0.08em;background:transparent;"
+                "border:none;padding:0 0 4px 0;}")
+            pl.addWidget(sec_bor)
+            for lbl_txt, val in self._INAT_BOR_ITEMS:
+                sel = sel_by_mode.get("inat_bor", set())
+                r = _SrcCheckRow(lbl_txt, val, val in sel, color)
+                r.setCallback(lambda chk, v, k="inat_bor", sid=src_id, m=mode:
+                    self._on_src_check(sid, k, v, chk, m))
+                pl.addWidget(r)
+                rows.append(r)
+            dv = QFrame()
+            dv.setFrameShape(QFrame.HLine)
+            dv.setStyleSheet(
+                "QFrame{border:none;background:#BBDEFB;"
+                "max-height:1px;margin:4px 0;}")
+            pl.addWidget(dv)
+            sec_qg = QLabel("QUALITY GRADE")
+            sec_qg.setStyleSheet(
+                "QLabel{font-size:9px;font-weight:600;color:#9CA3AF;"
+                "letter-spacing:0.08em;background:transparent;"
+                "border:none;padding:0 0 4px 0;}")
+            pl.addWidget(sec_qg)
+            for lbl_txt, val in self._INAT_QG_ITEMS:
+                sel = sel_by_mode.get("inat_qg", set())
+                r = _SrcCheckRow(lbl_txt, val, val in sel, color)
+                r.setCallback(lambda chk, v, k="inat_qg", sid=src_id, m=mode:
+                    self._on_src_check(sid, k, v, chk, m))
+                pl.addWidget(r)
+                rows.append(r)
 
-    def _save_filter_state_src(self):
+        pl.addStretch()
+        # panel — плавающий поверх, не в layout карточки
+        panel.setParent(self)
+        panel.setWindowFlags(
+            __import__('qgis.PyQt.QtCore', fromlist=['Qt']).Qt.ToolTip |
+            __import__('qgis.PyQt.QtCore', fromlist=['Qt']).Qt.FramelessWindowHint)
+        panel.setVisible(False)
+
+        getattr(self, f'_src_cards_{pfx}')[src_id]      = card
+        getattr(self, f'_src_panels_{pfx}')[src_id]     = panel
+        getattr(self, f'_src_badges_{pfx}')[src_id]     = badge
+        getattr(self, f'_src_arrows_{pfx}')[src_id]     = arrow
+        getattr(self, f'_src_name_lbls_{pfx}')[src_id]  = name_lbl
+        getattr(self, f'_src_check_rows_{pfx}')[src_id] = rows
+        return card
+
+    def _on_src_check(self, src_id, sel_key, value, checked, mode):
+        sel_by_mode = getattr(self, f'_sel_{mode}')
+        sel = sel_by_mode.setdefault(sel_key, set())
+        if checked: sel.add(value)
+        else:       sel.discard(value)
+        self._update_src_state(mode)
+        self._save_filter_state_src(mode)
+
+    def _update_src_state(self, mode):
+        pfx = mode
+        for src_id in ("gbif", "inat"):
+            color     = "#2E7D32" if src_id == "gbif" else "#1565C0"
+            bg_active = "#F1F8E9" if src_id == "gbif" else "#E3F2FD"
+            bd_open   = "#C8E6C9" if src_id == "gbif" else "#BBDEFB"
+            obj_name  = f"src_card_{src_id}_{mode}"
+
+            cards  = getattr(self, f'_src_cards_{pfx}',      {})
+            panels = getattr(self, f'_src_panels_{pfx}',     {})
+            badges = getattr(self, f'_src_badges_{pfx}',     {})
+            arrows = getattr(self, f'_src_arrows_{pfx}',     {})
+            nlbls  = getattr(self, f'_src_name_lbls_{pfx}',  {})
+            opens  = getattr(self, f'_src_open_{pfx}',       {})
+            chkrows= getattr(self, f'_src_check_rows_{pfx}', {})
+
+            card   = cards.get(src_id)
+            panel  = panels.get(src_id)
+            badge  = badges.get(src_id)
+            arrow  = arrows.get(src_id)
+            name_l = nlbls.get(src_id)
+            if not card: continue
+
+            rows    = chkrows.get(src_id, [])
+            n       = sum(1 for r in rows if r.isChecked())
+            has_any = n > 0
+            is_open = opens.get(src_id, False)
+
+            if has_any:
+                card.setStyleSheet(
+                    f"QFrame#{obj_name}{{background:{bg_active};"
+                    "border:1px solid #E0E0E0;border-radius:6px;}}")
+            else:
+                card.setStyleSheet(
+                    f"QFrame#{obj_name}{{background:#FAFAFA;"
+                    "border:1px solid #E0E0E0;border-radius:6px;}}")
+
+            if name_l:
+                name_l.setStyleSheet(
+                    f"QLabel{{font-size:12px;font-weight:600;"
+                    f"color:{color if has_any else '#9CA3AF'};"
+                    "background:transparent;border:none;padding:0;}")
+
+            if badge:
+                badge.setText(str(n))
+                badge.setVisible(has_any and not is_open)
+
+            if arrow:
+                arrow.setText("▴" if is_open else "▾")
+                arrow.setStyleSheet(
+                    f"QLabel{{color:{color if has_any else '#9CA3AF'};"
+                    "font-size:11px;background:transparent;"
+                    "border:none;padding:0;}")
+
+            if panel:
+                if is_open and not panel.isVisible():
+                    panel.setStyleSheet(
+                        f"QFrame{{background:{'#F1F8E9' if src_id=='gbif' else '#E3F2FD'};"
+                        f"border:1.5px solid {bd_open};"
+                        "border-radius:6px;padding:2px;}")
+                    panel.setFixedWidth(card.width())
+                    from qgis.PyQt.QtCore import QPoint as _QP
+                    pos = card.mapToGlobal(_QP(0, card.height() + 2))
+                    panel.move(pos)
+                    panel.adjustSize()
+                    panel.show()
+                    panel.raise_()
+                elif not is_open and panel.isVisible():
+                    panel.hide()
+
+        g_ok = any(r.isChecked()
+                   for r in getattr(self, f'_src_check_rows_{pfx}', {}).get("gbif", []))
+        i_ok = any(r.isChecked()
+                   for r in getattr(self, f'_src_check_rows_{pfx}', {}).get("inat", []))
+        if g_ok and i_ok:   self._source = "both"
+        elif g_ok:          self._source = "gbif"
+        elif i_ok:          self._source = "inat"
+        else:               self._source = None
+
+        warn = getattr(self, f'_src_warn_{pfx}', None)
+        if warn:
+            warn.setVisible(not g_ok and not i_ok)
+
+        pass  # floating panels don't need height equalization
+
+    def _equalize_src_panels(self, mode):
+        pfx    = mode
+        opens  = getattr(self, f'_src_open_{pfx}',  {})
+        panels = getattr(self, f'_src_panels_{pfx}', {})
+        gp = panels.get("gbif")
+        ip = panels.get("inat")
+        if not gp or not ip: return
+        # выравниваем только если обе открыты
+        if opens.get("gbif") and opens.get("inat"):
+            from qgis.PyQt.QtCore import QTimer as _QT2
+            def _do_eq():
+                h = max(gp.sizeHint().height(), ip.sizeHint().height(), 140)
+                gp.setFixedHeight(h)
+                ip.setFixedHeight(h)
+            _QT2.singleShot(50, _do_eq)
+        else:
+            # сбрасываем фиксированную высоту для закрытой
+            for p in (gp, ip):
+                p.setMinimumHeight(0)
+                p.setMaximumHeight(16777215)
+
+    def _save_filter_state_src(self, mode="single"):
         import json
         s = QgsSettings()
-        for key, vals in self._sel.items():
-            s.setValue("biosnap/filter2/" + key, json.dumps(list(vals)))
+        sel = getattr(self, f'_sel_{mode}', {})
+        for key in ("gbif_bor", "inat_bor", "inat_qg"):
+            s.setValue(f"biosnap/filter3/{mode}/{key}",
+                       json.dumps(list(sel.get(key, set()))))
 
-    def _load_filter_state_src(self):
+    def _load_filter_state_src(self, mode="single"):
         import json
-        s = QgsSettings()
-        self._sel = {}
-        for key in ("gbif_bor", "inat_qg", "both_bor", "both_qg"):
-            raw = s.value("biosnap/filter2/" + key, "")
+        s  = QgsSettings()
+        sel = {}
+        for key in ("gbif_bor", "inat_bor", "inat_qg"):
+            raw = s.value(f"biosnap/filter3/{mode}/{key}", "")
             if raw:
                 try:
-                    self._sel[key] = set(json.loads(raw))
+                    sel[key] = set(json.loads(raw))
                     continue
                 except Exception:
                     pass
-            self._sel[key] = set()
+            sel[key] = set()
+        setattr(self, f'_sel_{mode}', sel)
+
 
     # ── YEAR / ACCURACY ───────────────────────────────────────
 
