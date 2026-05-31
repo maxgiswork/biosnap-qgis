@@ -740,6 +740,7 @@ class BioSnapDialog(QDialog):
             Qt.WindowMinimizeButtonHint | Qt.WindowMaximizeButtonHint)
         self.setMinimumWidth(320)
         self.setMinimumHeight(560)
+        self.setMaximumHeight(720)
         self.resize(460, 720)
         self.setStyleSheet(MAIN_STYLE)
         self._mode   = "single"
@@ -2035,12 +2036,11 @@ class BioSnapDialog(QDialog):
                 rows.append(r)
 
         pl.addStretch()
-        # panel — плавающий поверх, не в layout карточки
-        panel.setParent(self)
-        panel.setWindowFlags(
-            __import__('qgis.PyQt.QtCore', fromlist=['Qt']).Qt.ToolTip |
-            __import__('qgis.PyQt.QtCore', fromlist=['Qt']).Qt.FramelessWindowHint)
         panel.setVisible(False)
+        if hasattr(self, '_src_scroll'):
+            panel.setParent(self._scroll_area.viewport())
+        else:
+            panel.setParent(self)
 
         getattr(self, f'_src_cards_{pfx}')[src_id]      = card
         getattr(self, f'_src_panels_{pfx}')[src_id]     = panel
@@ -2117,13 +2117,14 @@ class BioSnapDialog(QDialog):
                     panel.setStyleSheet(
                         f"QFrame{{background:{'#F1F8E9' if src_id=='gbif' else '#E3F2FD'};"
                         f"border:1.5px solid {bd_open};"
-                        "border-radius:6px;padding:2px;}")
-                    panel.setFixedWidth(card.width())
+                        "border-radius:0 0 6px 6px;}}")
                     from qgis.PyQt.QtCore import QPoint as _QP
-                    pos = card.mapToGlobal(_QP(0, card.height() + 2))
-                    panel.move(pos)
+                    _par = panel.parent()
+                    _pos = card.mapTo(_par, _QP(0, card.height()))
+                    panel.setFixedWidth(card.width())
                     panel.adjustSize()
-                    panel.show()
+                    panel.move(_pos)
+                    panel.setVisible(True)
                     panel.raise_()
                 elif not is_open and panel.isVisible():
                     panel.hide()
@@ -2141,7 +2142,8 @@ class BioSnapDialog(QDialog):
         if warn:
             warn.setVisible(not g_ok and not i_ok)
 
-        pass  # floating panels don't need height equalization
+        from qgis.PyQt.QtCore import QTimer as _QT
+        _QT.singleShot(0, lambda m=mode: self._equalize_src_panels(m))
 
     def _equalize_src_panels(self, mode):
         pfx    = mode
