@@ -363,18 +363,37 @@ class _ModePillBtn(QPushButton):
                 stem2.closeSubpath()
                 p.fillPath(stem2, color)
         elif self._icon_key == "advanced":
-            pen2 = QPen(color, 1.6, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
-            p.setPen(pen2)
+            # Три слоя данных
+            from qgis.PyQt.QtCore import QPointF as _QP2
+            pen2 = QPen(color, 1.5, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+            for i, (oy, op) in enumerate([(0.0, 1.0), (0.3, 0.7), (0.6, 0.4)]):
+                p.setOpacity(op)
+                p.setPen(pen2)
+                p.setBrush(Qt.NoBrush)
+                ly = y + h * oy + h * 0.08
+                layer = QPainterPath()
+                layer.moveTo(x + 0.5,      ly + h * 0.14)
+                layer.lineTo(cx,           ly)
+                layer.lineTo(x + w - 0.5,  ly + h * 0.14)
+                layer.lineTo(cx,           ly + h * 0.28)
+                layer.closeSubpath()
+                p.drawPath(layer)
+            p.setOpacity(1.0)
+        elif self._icon_key == "about":
+            # i в тонком кружке
+            pen_ab = QPen(color, 1.4, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+            p.setPen(pen_ab)
             p.setBrush(Qt.NoBrush)
-            path = QPainterPath()
-            path.moveTo(x + 0.5,     y + 1.5)
-            path.lineTo(x + w - 0.5, y + 1.5)
-            path.lineTo(cx + w*0.18, y + h*0.52)
-            path.lineTo(cx + w*0.18, y + h - 1.5)
-            path.lineTo(cx - w*0.18, y + h - 1.5)
-            path.lineTo(cx - w*0.18, y + h*0.52)
-            path.closeSubpath()
-            p.drawPath(path)
+            p.drawEllipse(QPointF(cx, y + h/2.0), w*0.46, h*0.46)
+            # точка сверху
+            p.setPen(Qt.NoPen)
+            p.setBrush(color)
+            p.drawEllipse(QPointF(cx, y + h*0.28), w*0.10, h*0.10)
+            # вертикальная черта
+            pen_ab2 = QPen(color, 1.5, Qt.SolidLine, Qt.RoundCap)
+            p.setPen(pen_ab2)
+            p.drawLine(QPointF(cx, y + h*0.40),
+                       QPointF(cx, y + h*0.76))
         elif self._icon_key == "games":
             # Звезда
             import math
@@ -773,9 +792,19 @@ class BioSnapDialog(QDialog):
 
         # index 1 — advanced panel
         self._main_stack.addWidget(self._build_advanced_panel())
+        self._main_stack.addWidget(self._build_about_panel())
 
         root.addWidget(self._main_stack)
         self._set_mode("single")
+
+    def _build_about_panel(self):
+        w = QWidget()
+        w.setStyleSheet("background:#F6F5F3;")
+        v = QVBoxLayout(w)
+        v.setContentsMargins(24, 32, 24, 24)
+        v.setSpacing(12)
+        v.addStretch()
+        return w
 
     # ── MODE BAR ──────────────────────────────────────────────
 
@@ -829,11 +858,13 @@ class BioSnapDialog(QDialog):
         self._btn_single   = _ModePillBtn("single",   "Single")
         self._btn_batch    = _ModePillBtn("batch",    "Batch")
         self._btn_advanced = _ModePillBtn("advanced", "Advanced")
+        self._btn_about    = _ModePillBtn("about",    "About")
         self._btn_games    = _ModePillBtn("games",    "Achievements")
 
         self._btn_single.clicked.connect(lambda: self._set_mode("single"))
         self._btn_batch.clicked.connect(lambda: self._set_mode("batch"))
         self._btn_advanced.clicked.connect(lambda: self._set_mode("advanced"))
+        self._btn_about.clicked.connect(lambda: self._set_mode("about"))
         self._btn_games.clicked.connect(lambda: self._set_mode("games"))
 
         h.addWidget(self._btn_single)
@@ -841,6 +872,8 @@ class BioSnapDialog(QDialog):
         h.addWidget(self._btn_batch)
         h.addWidget(_sep())
         h.addWidget(self._btn_advanced)
+        h.addWidget(_sep())
+        h.addWidget(self._btn_about)
         h.addWidget(_sep())
         h.addWidget(self._btn_games)
 
@@ -852,10 +885,16 @@ class BioSnapDialog(QDialog):
         self._btn_single.setActive(mode == "single")
         self._btn_batch.setActive(mode == "batch")
         self._btn_advanced.setActive(mode == "advanced")
+        if hasattr(self, '_btn_about'):
+            self._btn_about.setActive(mode == "about")
 
         if mode == "advanced":
             self._mode = "advanced"
             self._main_stack.setCurrentIndex(1)
+            return
+        if mode == "about":
+            self._mode = "about"
+            self._main_stack.setCurrentIndex(2)
             return
 
         self._main_stack.setCurrentIndex(0)
@@ -1442,6 +1481,7 @@ class BioSnapDialog(QDialog):
     def showEvent(self, e):
         super().showEvent(e)
         self._update_slider_width()
+        self._set_mode("single")
 
     def resizeEvent(self, e):
         super().resizeEvent(e)
@@ -1461,35 +1501,14 @@ class BioSnapDialog(QDialog):
         header = QFrame()
         header.setObjectName("header")
         header.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        header.setFixedHeight(50)
+        header.setFixedHeight(46)
         outer = QHBoxLayout(header)
-        outer.setContentsMargins(16, 0, 12, 0)
+        outer.setContentsMargins(8, 0, 8, 0)
         outer.setSpacing(0)
         outer.setAlignment(Qt.AlignVCenter)
-        # Логотип
-        logo_w = QWidget()
-        logo_w.setStyleSheet("background:transparent;")
-        logo_v = QVBoxLayout(logo_w)
-        logo_v.setContentsMargins(0, 0, 0, 0)
-        logo_v.setSpacing(1)
-        logo_v.setAlignment(Qt.AlignVCenter)
-        lbl_name = QLabel()
-        lbl_name.setText(
-            '<span style="font-family:Segoe UI;font-size:17pt;font-weight:bold;">'
-            '<span style="color:#D21C1C;font-style:italic;">B</span>'
-            '<span style="color:#FFFFFF;">ioSnap</span></span>')
-        lbl_name.setStyleSheet("background:transparent;")
-        lbl_name.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        lbl_sub = QLabel("Quick occurrence loader")
-        lbl_sub.setStyleSheet(
-            "color:#9CA3AF; font-size:9px; background:transparent;")
-        lbl_sub.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        logo_v.addWidget(lbl_name)
-        logo_v.addWidget(lbl_sub)
-        outer.addWidget(logo_w)
         outer.addStretch()
-        # Mode pill bar — справа в хедере
         outer.addWidget(self._create_mode_pill_bar())
+        outer.addStretch()
         return header
 
     # ── SEARCH BLOCK ──────────────────────────────────────────
