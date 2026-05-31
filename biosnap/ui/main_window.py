@@ -2002,25 +2002,6 @@ class BioSnapDialog(QDialog):
                 pl.addWidget(r)
                 rows.append(r)
         else:
-            sec_bor = QLabel("BASIS OF RECORD")
-            sec_bor.setStyleSheet(
-                "QLabel{font-size:9px;font-weight:600;color:#9CA3AF;"
-                "letter-spacing:0.08em;background:transparent;"
-                "border:none;padding:0 0 4px 0;}")
-            pl.addWidget(sec_bor)
-            for lbl_txt, val in self._INAT_BOR_ITEMS:
-                sel = sel_by_mode.get("inat_bor", set())
-                r = _SrcCheckRow(lbl_txt, val, val in sel, color)
-                r.setCallback(lambda chk, v, k="inat_bor", sid=src_id, m=mode:
-                    self._on_src_check(sid, k, v, chk, m))
-                pl.addWidget(r)
-                rows.append(r)
-            dv = QFrame()
-            dv.setFrameShape(QFrame.HLine)
-            dv.setStyleSheet(
-                "QFrame{border:none;background:#BBDEFB;"
-                "max-height:1px;margin:4px 0;}")
-            pl.addWidget(dv)
             sec_qg = QLabel("QUALITY GRADE")
             sec_qg.setStyleSheet(
                 "QLabel{font-size:9px;font-weight:600;color:#9CA3AF;"
