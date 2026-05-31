@@ -18,7 +18,7 @@ CHIP_SM_ON  = ("background-color:#1A1A22; color:#FFFFFF; border:none;"
 CHIP_SM_OFF = ("background-color:#ECECF0; color:#1A1A22; border:none;"
                "border-radius:10px; padding:3px 12px; font-size:11px;")
 SECTION_LBL = ("font-size:10px; color:#6B7280; font-weight:bold;"
-               "background:transparent; margin-bottom:2px;")
+               "background:transparent; margin-bottom:1px;")
 FIELD = ("border:1px solid #E0E0E0; border-radius:6px;"
          "padding:4px 8px; background:#FFFFFF; font-size:12px;")
 SEARCH_FRAME_NORMAL = ("QFrame { background:#FFFFFF; border:1.5px solid #E5E7EB;"
@@ -765,8 +765,8 @@ class BioSnapDialog(QDialog):
         body = QWidget()
         body.setStyleSheet("background:#F6F5F3;")
         bl = QVBoxLayout(body)
-        bl.setContentsMargins(16, 14, 16, 16)
-        bl.setSpacing(8)
+        bl.setContentsMargins(16, 10, 16, 12)
+        bl.setSpacing(6)
         bl.addWidget(self._build_search_block())
         self._divider_after_search = self._divider()
         bl.addWidget(self._divider_after_search)
@@ -778,15 +778,19 @@ class BioSnapDialog(QDialog):
         for _sm in ('single', 'batch'):
             self._source_stack.addWidget(self._build_source_block(_sm))
         self._source_stack.setCurrentIndex(0)
+        self._source_stack.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         bl.addWidget(self._source_stack)
         bl.addWidget(self._divider())
         bl.addWidget(self._build_year_accuracy_block())
+        bl.addWidget(self._divider())
         bl.addWidget(self._build_toggles_block())
         bl.addWidget(self._divider())
         bl.addWidget(self._build_preview_block())
+        bl.addWidget(self._divider())
         bl.addWidget(self._build_output_block())
+        bl.addWidget(self._divider())
         bl.addWidget(self._build_format_block())
-        bl.addSpacing(4)
+        bl.addSpacing(6)
         bl.addWidget(self._build_run_btn())
         scroll.setWidget(body)
         self._main_stack.addWidget(scroll)
@@ -1494,6 +1498,8 @@ class BioSnapDialog(QDialog):
     def _slbl(self, text):
         lbl = QLabel(text)
         lbl.setStyleSheet(SECTION_LBL)
+        lbl.setFixedHeight(16)
+        lbl.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         return lbl
 
     # ── HEADER ────────────────────────────────────────────────
@@ -1871,7 +1877,7 @@ class BioSnapDialog(QDialog):
         w.setStyleSheet("background:transparent;")
         v = QVBoxLayout(w)
         v.setContentsMargins(0, 0, 0, 0)
-        v.setSpacing(4)
+        v.setSpacing(2)
         v.addWidget(self._slbl("Source"))
 
         row_w = QWidget()
@@ -1891,7 +1897,9 @@ class BioSnapDialog(QDialog):
         warn = QLabel("⚠  Both inactive — no data will load")
         warn.setStyleSheet(
             "QLabel{color:#F59E0B;font-size:10px;"
-            "background:transparent;border:none;padding:2px 0 0 0;}")
+            "background:transparent;border:none;padding:0;margin:0;}")
+        warn.setFixedHeight(14)
+        warn.setVisible(False)
         setattr(self, f'_src_warn_{pfx}', warn)
         v.addWidget(warn)
 
@@ -2185,13 +2193,13 @@ class BioSnapDialog(QDialog):
             w.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             h = QHBoxLayout(w)
             h.setContentsMargins(0, 0, 0, 0)
-            h.setSpacing(16)
+            h.setSpacing(12)
             yw = QWidget()
             yw.setStyleSheet("background:transparent;")
             yw.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             yv = QVBoxLayout(yw)
             yv.setContentsMargins(0, 0, 0, 0)
-            yv.setSpacing(2)
+            yv.setSpacing(1)
             yv.addWidget(self._slbl("Year range"))
             yr = QWidget()
             yr.setStyleSheet("background:transparent;")
@@ -2214,7 +2222,7 @@ class BioSnapDialog(QDialog):
             aw.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             av = QVBoxLayout(aw)
             av.setContentsMargins(0, 0, 0, 0)
-            av.setSpacing(2)
+            av.setSpacing(1)
             av.addWidget(self._slbl("Accuracy \u2264"))
             ac = AccuracySlider(100, 100000, 10000)
             ac._settings_key = "biosnap/accuracy_slider/" + mode
@@ -2230,6 +2238,7 @@ class BioSnapDialog(QDialog):
             h.addWidget(aw)
             self._sliders_stack.addWidget(w)
         self._sliders_stack.setCurrentIndex(0)
+        self._sliders_stack.setFixedHeight(47)
         self._year_slider     = self._year_sliders["single"]
         self._accuracy_slider = self._accuracy_sliders["single"]
         return self._sliders_stack
@@ -2252,8 +2261,8 @@ class BioSnapDialog(QDialog):
             w = QWidget()
             w.setStyleSheet("background:transparent;")
             v = QVBoxLayout(w)
-            v.setContentsMargins(0, 4, 0, 0)
-            v.setSpacing(6)
+            v.setContentsMargins(0, 0, 0, 0)
+            v.setSpacing(2)
             toggles = {}
             def make_tog(key, mode_=mode, label="", checked=False):
                 saved = QgsSettings().value(
@@ -2271,7 +2280,7 @@ class BioSnapDialog(QDialog):
                 lw.setStyleSheet("background:transparent;")
                 lh = QHBoxLayout(lw)
                 lh.setContentsMargins(0, 0, 0, 0)
-                lh.setSpacing(8)
+                lh.setSpacing(6)
                 lh.addWidget(t)
                 lb = QLabel(label)
                 lb.setStyleSheet(
@@ -2298,6 +2307,7 @@ class BioSnapDialog(QDialog):
             self._toggle_widgets[mode] = toggles
             self._toggles_stack.addWidget(w)
         self._toggles_stack.setCurrentIndex(0)
+        self._toggles_stack.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         return self._toggles_stack
 
     def _get_toggles(self, mode=None):
