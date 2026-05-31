@@ -2236,13 +2236,12 @@ class BioSnapDialog(QDialog):
 
     # ── TOGGLES ───────────────────────────────────────────────
 
-    _TOGGLE_KEYS     = ["has_coordinates", "has_taxonomy", "has_media",
-                        "fossils_only", "no_duplicates"]
+    _TOGGLE_KEYS     = ["has_coordinates", "has_taxonomy", "has_media", "no_duplicates"]
     _TOGGLE_DEFAULTS = {
-        "single": {"has_coordinates": True,  "has_taxonomy": True,
-                   "has_media": False, "fossils_only": False, "no_duplicates": True},
-        "batch":  {"has_coordinates": True,  "has_taxonomy": True,
-                   "has_media": False, "fossils_only": False, "no_duplicates": True},
+        "single": {"has_coordinates": True,  "has_taxonomy": False,
+                   "has_media": False, "no_duplicates": True},
+        "batch":  {"has_coordinates": True,  "has_taxonomy": False,
+                   "has_media": False, "no_duplicates": True},
     }
 
     def _build_toggles_block(self):
@@ -2284,8 +2283,7 @@ class BioSnapDialog(QDialog):
             defs = self._TOGGLE_DEFAULTS[mode]
             pairs_list = [
                 [("has_coordinates", "Has coordinates"), ("has_taxonomy",  "Has taxonomy")],
-                [("has_media",       "Has media"),       ("fossils_only",  "Fossils only")],
-                [("no_duplicates",   "No duplicates")],
+                [("has_media",       "Has media"),       ("no_duplicates", "No duplicates")],
             ]
             for pairs in pairs_list:
                 row = QWidget()
