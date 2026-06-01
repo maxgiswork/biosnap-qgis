@@ -2318,8 +2318,9 @@ class BioSnapDialog(QDialog):
                 lb = QLabel(label)
                 lb.setStyleSheet(
                     "color:#1C2B1C; font-size:12px; background:transparent;")
+                lb.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
                 lh.addWidget(lb)
-                lh.addStretch()
+                lw.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
                 toggles[key] = t
                 return lw
             defs = self._TOGGLE_DEFAULTS[mode]
@@ -2327,16 +2328,19 @@ class BioSnapDialog(QDialog):
                 [("has_coordinates", "Has coordinates"), ("has_taxonomy",  "Has taxonomy")],
                 [("has_media",       "Has media"),       ("no_duplicates", "No duplicates")],
             ]
-            for pairs in pairs_list:
-                row = QWidget()
-                row.setStyleSheet("background:transparent;")
-                rh = QHBoxLayout(row)
-                rh.setContentsMargins(0, 0, 0, 0)
-                rh.setSpacing(20)
-                for key, label in pairs:
-                    rh.addWidget(make_tog(key, mode, label, defs[key]))
-                rh.addStretch()
-                v.addWidget(row)
+            grid_w = QWidget()
+            grid_w.setStyleSheet("background:transparent;")
+            from qgis.PyQt.QtWidgets import QGridLayout
+            grid = QGridLayout(grid_w)
+            grid.setContentsMargins(0, 0, 0, 0)
+            grid.setHorizontalSpacing(20)
+            grid.setVerticalSpacing(2)
+            grid.setColumnStretch(0, 1)
+            grid.setColumnStretch(1, 1)
+            for row_i, pairs in enumerate(pairs_list):
+                for col_i, (key, label) in enumerate(pairs):
+                    grid.addWidget(make_tog(key, mode, label, defs[key]), row_i, col_i)
+            v.addWidget(grid_w)
             self._toggle_widgets[mode] = toggles
             self._toggles_stack.addWidget(w)
         self._toggles_stack.setCurrentIndex(0)
