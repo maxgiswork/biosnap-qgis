@@ -561,6 +561,36 @@ class YearRangeSlider(QWidget):
     def _tx(self):
         return 8, self.width() - 16, 20
 
+    def _label_positions(self):
+        from qgis.PyQt.QtGui import QFont, QFontMetrics
+        tx, tw, ty = self._tx()
+        x1 = self._year_to_x(self._start)
+        x2 = self._year_to_x(self._end)
+        fnt = QFont('Segoe UI', 8)
+        fnt.setBold(True)
+        fm = QFontMetrics(fnt)
+        txt1 = str(self._start)
+        txt2 = str(self._end)
+        w1 = fm.horizontalAdvance(txt1)
+        w2 = fm.horizontalAdvance(txt2)
+        W = self.width()
+        # центрируем по ползункам
+        lx1 = x1 - w1 // 2
+        lx2 = x2 - w2 // 2
+        # если перекрываются — разводим симметрично от середины
+        if lx2 < lx1 + w1 + 4:
+            mid = (x1 + x2) // 2
+            lx1 = mid - w1 - 2
+            lx2 = mid + 2
+        # не выходим за края виджета
+        lx1 = max(0, lx1)
+        lx2 = max(lx1 + w1 + 4, lx2)
+        lx2 = min(W - w2, lx2)
+        lx1 = min(lx1, lx2 - w1 - 4)
+        lx1 = max(0, lx1)
+        h = fm.height()
+        return lx1, lx2, w1, w2, h, txt1, txt2
+
     def _year_to_x(self, year):
         tx, tw, ty = self._tx()
         r = (year - self.min_year) / max(1, self.max_year - self.min_year)
@@ -597,21 +627,11 @@ class YearRangeSlider(QWidget):
             p.setBrush(QColor('#FFFFFF'))
             p.setPen(Qt.NoPen)
             p.drawEllipse(x - 3, ty - 3, 6, 6)
-        p.setPen(QColor('#1C2B1C'))
+        lx1, lx2, w1, w2, lh, txt1, txt2 = self._label_positions()
         fnt = QFont('Segoe UI', 8)
         fnt.setBold(True)
         p.setFont(fnt)
-        fm = p.fontMetrics()
-        txt1 = str(self._start)
-        txt2 = str(self._end)
-        w1 = fm.horizontalAdvance(txt1)
-        w2 = fm.horizontalAdvance(txt2)
-        lx1 = max(0, x1 - w1 // 2)
-        lx2 = min(self.width() - w2, x2 - w2 // 2)
-        if lx2 < lx1 + w1 + 6:
-            mid = (x1 + x2) // 2
-            lx1 = max(0, mid - w1 - 3)
-            lx2 = min(self.width() - w2, mid + 3)
+        p.setPen(QColor('#1C2B1C'))
         p.drawText(lx1, ty - 10, txt1)
         p.drawText(lx2, ty - 10, txt2)
         p.end()
@@ -629,24 +649,8 @@ class YearRangeSlider(QWidget):
         return None
 
     def _label_hit(self, x, y):
-        from qgis.PyQt.QtGui import QFont, QFontMetrics
-        fnt = QFont('Segoe UI', 8)
-        fnt.setBold(True)
-        fm = QFontMetrics(fnt)
         tx, tw, ty = self._tx()
-        x1 = self._year_to_x(self._start)
-        x2 = self._year_to_x(self._end)
-        txt1 = str(self._start)
-        txt2 = str(self._end)
-        w1 = fm.horizontalAdvance(txt1)
-        w2 = fm.horizontalAdvance(txt2)
-        lx1 = max(0, x1 - w1 // 2)
-        lx2 = x2 - w2 // 2
-        if lx2 < lx1 + w1 + 6:
-            mid = (x1 + x2) // 2
-            lx1 = max(0, mid - w1 - 3)
-            lx2 = min(self.width() - w2, mid + 3)
-        h = fm.height()
+        lx1, lx2, w1, w2, h, txt1, txt2 = self._label_positions()
         top = ty - 12 - h
         if lx1 <= x <= lx1 + w1 and top <= y <= top + h + 4:
             return 'left', lx1, top, w1, h
