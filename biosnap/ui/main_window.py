@@ -937,11 +937,13 @@ class BioSnapDialog(QDialog):
             idx = {"single": 0, "batch": 1}.get(mode, 0)
             self._source_stack.setCurrentIndex(idx)
         if mode == "batch":
+            self._save_single_state()
             self._restore_batch_state()
         else:
             self._save_batch_state()
             for row in list(self._extra_rows):
                 self._remove_search_row(row)
+            self._restore_single_state()
 
     # ── ADVANCED PANEL ────────────────────────────────────────
 
@@ -1721,6 +1723,16 @@ class BioSnapDialog(QDialog):
         items.insert(0, entry)
         items = items[:10]
         settings.setValue("biosnap/taxon_history", "||".join(items))
+
+    def _save_single_state(self):
+        QgsSettings().setValue("biosnap/single_rank", self._rank)
+        QgsSettings().setValue("biosnap/single_text", self._search_field.text())
+
+    def _restore_single_state(self):
+        rank = QgsSettings().value("biosnap/single_rank", "Species")
+        text = QgsSettings().value("biosnap/single_text", "")
+        self._search_field.setText(text)
+        self._set_rank(rank)
 
     def _save_batch_state(self):
         import json
